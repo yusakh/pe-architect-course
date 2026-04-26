@@ -1,5 +1,12 @@
 - macro: known_drop_and_execute_activities
   condition: >
-    proc.pname = "coder" or
-    proc.cwd startswith "/workspaces/"
-  append: true
+    or not k8s.pod.name exists
+    or proc.pname = "mount-product-f"
+  override:
+    condition: append
+- macro: user_known_root_container_exceptions
+  condition: >
+    or not k8s.pod.name exists
+    or proc.pname = "mount-product-f"
+  override:
+    condition: append
