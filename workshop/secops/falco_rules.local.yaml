@@ -1,0 +1,5 @@
+- macro: known_drop_and_execute_activities
+  condition: >
+    proc.pname = "coder" or
+    proc.cwd startswith "/workspaces/"
+  append: true
