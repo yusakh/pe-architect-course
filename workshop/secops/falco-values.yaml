@@ -1,0 +1,23 @@
+driver:
+  kind: modern_ebpf
+
+falcosidekick:
+  enabled: true
+  config:
+    webhook:
+      address: "http://webhook-receiver.falco-system.svc.cluster.local:8080"
+    discord:
+      webhookurl: "https://discord.com/api/webhooks/1498082565213519913/D3SvudUsy3mH1MkjlN-655i_1-HTGVRW5iPKJHVveN0Ltb2f8RnSxN0Xi9qchUFDauXv"
+      minimumpriority: "notice"
+
+falco:
+  buffered_outputs: false
+
+### rules from falco_rules.local.yaml could be added here as well:
+# customRules:
+#   custom_rules.yaml: |
+#     - rule: Container Running as Root
+#       ...
+#   local_rules.yaml: |
+#     - macro: known_drop_and_execute_activities
+#       ...

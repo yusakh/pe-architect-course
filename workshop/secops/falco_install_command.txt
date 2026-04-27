@@ -1,6 +1,0 @@
-helm upgrade falco falcosecurity/falco \
---namespace falco-system \
---set driver.kind=modern_ebpf \
---set falcosidekick.enabled=true \
---set-file customRules."custom_rules\.yaml"=./root-detect-rule.yaml \
---set-file customRules."local_rules\.yaml"=./falco_rules.local.yaml

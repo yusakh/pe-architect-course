@@ -1,12 +1,35 @@
+- rule: Container Running as Root
+  condition: >
+    spawned_process and
+    container and
+    container.name exists and
+    proc.pname != "pause" and
+    user.uid = 0 and
+    not user_known_root_container_exceptions
+  override:
+    condition: replace
+
+- rule: Root Process in User Namespace
+  condition: >
+    spawned_process and
+    container and
+    container.name exists and
+    user.uid = 0 and
+    not k8s.ns.name in ("kube-system", "kube-public", "falco-system", "default") and
+    not user_known_root_container_exceptions
+  override:
+    condition: replace
 - macro: known_drop_and_execute_activities
   condition: >
-    or not k8s.pod.name exists
+    or not container.name exists
     or proc.pname = "mount-product-f"
+    or proc.name = "mount-product-f"
   override:
     condition: append
+
 - macro: user_known_root_container_exceptions
   condition: >
-    or not k8s.pod.name exists
     or proc.pname = "mount-product-f"
+    or proc.name = "mount-product-f"
   override:
     condition: append
