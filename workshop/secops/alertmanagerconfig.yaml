@@ -28,7 +28,7 @@ spec:
   receivers:
   - name: discord-falco
     discordConfigs:
-    - webhookURL:
+    - apiURL:
         name: discord-webhook-secret
         key: url
       title: '{{ .CommonAnnotations.summary }}'
