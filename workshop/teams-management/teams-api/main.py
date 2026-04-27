@@ -1,9 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List
 import uuid
 from datetime import datetime
+import sqlite3
+import os
+
+DB_PATH = os.getenv("DB_PATH", "/data/teams.db")
 
 app = FastAPI(
     title="Teams API",
@@ -20,8 +24,26 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-# In-memory storage
-teams_store: Dict[str, Dict] = {}
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS teams (
+            id TEXT PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
 
 # Pydantic models
 class TeamCreate(BaseModel):
@@ -32,55 +54,79 @@ class Team(BaseModel):
     name: str
     created_at: datetime
 
+
+@app.on_event("startup")
+def startup():
+    init_db()
+
+
 @app.get("/")
 async def root():
     return {"message": "Teams API is running"}
 
+
 @app.post("/teams", response_model=Team)
 async def create_team(team: TeamCreate):
     """Create a new team"""
-    # Check if team name already exists
-    for existing_team in teams_store.values():
-        if existing_team["name"].lower() == team.name.lower():
-            raise HTTPException(status_code=400, detail="Team name already exists")
-
-    # Generate unique ID and create team
     team_id = str(uuid.uuid4())
-    new_team = {
-        "id": team_id,
-        "name": team.name,
-        "created_at": datetime.now()
-    }
+    created_at = datetime.now().isoformat()
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO teams (id, name, created_at) VALUES (?, ?, ?)",
+            (team_id, team.name, created_at)
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        # IntegrityError is raised when UNIQUE constraint on name is violated
+        raise HTTPException(status_code=400, detail="Team name already exists")
+    finally:
+        conn.close()
+    return Team(id=team_id, name=team.name, created_at=created_at)
 
-    teams_store[team_id] = new_team
-    return Team(**new_team)
 
 @app.get("/teams", response_model=List[Team])
 async def get_teams():
     """Get all teams"""
-    return [Team(**team) for team in teams_store.values()]
+    conn = get_db()
+    rows = conn.execute("SELECT id, name, created_at FROM teams").fetchall()
+    conn.close()
+    return [Team(**dict(row)) for row in rows]
+
 
 @app.get("/teams/{team_id}", response_model=Team)
 async def get_team(team_id: str):
     """Get a specific team by ID"""
-    if team_id not in teams_store:
+    conn = get_db()
+    row = conn.execute("SELECT id, name, created_at FROM teams WHERE id = ?", (team_id,)).fetchone()
+    conn.close()
+    if row is None:
         raise HTTPException(status_code=404, detail="Team not found")
+    return Team(**dict(row))
 
-    return Team(**teams_store[team_id])
 
 @app.delete("/teams/{team_id}")
 async def delete_team(team_id: str):
     """Delete a team"""
-    if team_id not in teams_store:
+    conn = get_db()
+    row = conn.execute("SELECT name FROM teams WHERE id = ?", (team_id,)).fetchone()
+    if row is None:
+        conn.close()
         raise HTTPException(status_code=404, detail="Team not found")
+    conn.execute("DELETE FROM teams WHERE id = ?", (team_id,))
+    conn.commit()
+    conn.close()
+    return {"message": f"Team '{row['name']}' deleted successfully"}
 
-    deleted_team = teams_store.pop(team_id)
-    return {"message": f"Team '{deleted_team['name']}' deleted successfully"}
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint for Kubernetes"""
-    return {"status": "healthy", "teams_count": len(teams_store)}
+    conn = get_db()
+    count = conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0]
+    conn.close()
+    return {"status": "healthy", "teams_count": count}
+
 
 if __name__ == "__main__":
     import uvicorn
