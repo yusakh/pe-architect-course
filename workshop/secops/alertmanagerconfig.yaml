@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: discord-webhook-secret
+  namespace: falco-system
+type: Opaque
+stringData:
+  url: "https://discord.com/api/webhooks/1498082565213519913/D3SvudUsy3mH1MkjlN-655i_1-HTGVRW5iPKJHVveN0Ltb2f8RnSxN0Xi9qchUFDauXv"
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: falco-discord
+  namespace: falco-system
+  labels:
+    release: grafana-stack  # must match Alertmanager alertmanagerConfigSelector
+spec:
+  route:
+    receiver: discord-falco
+    matchers:
+    - name: source
+      value: falco
+      matchType: "="
+    groupBy: ["alertname", "priority", "rule"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 1h
+  receivers:
+  - name: discord-falco
+    discordConfigs:
+    - webhookURL:
+        name: discord-webhook-secret
+        key: url
+      title: '{{ .CommonAnnotations.summary }}'
+      message: '{{ range .Alerts }}{{ .Annotations.description }}{{ "\n" }}{{ end }}'
+      sendResolved: false

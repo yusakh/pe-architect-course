@@ -6,9 +6,12 @@ falcosidekick:
   config:
     webhook:
       address: "http://webhook-receiver.falco-system.svc.cluster.local:8080"
-    discord:
-      webhookurl: "https://discord.com/api/webhooks/1498082565213519913/D3SvudUsy3mH1MkjlN-655i_1-HTGVRW5iPKJHVveN0Ltb2f8RnSxN0Xi9qchUFDauXv"
-      minimumpriority: "notice"
+    # discord direct webhook disabled: alerts now routed via Alertmanager (see alertmanagerconfig.yaml)
+    # discord:
+    #   webhookurl: "https://discord.com/api/webhooks/1498082565213519913/D3SvudUsy3mH1MkjlN-655i_1-HTGVRW5iPKJHVveN0Ltb2f8RnSxN0Xi9qchUFDauXv"
+    #   minimumpriority: "notice"
+    prometheusmetrics:
+      enabled: true
 
 falco:
   buffered_outputs: false

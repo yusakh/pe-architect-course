@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: falco-alerts
+  namespace: falco-system
+  labels:
+    release: grafana-stack  # must match Prometheus ruleSelector
+spec:
+  groups:
+  - name: falco.rules
+    rules:
+    - alert: FalcoCriticalEvent
+      expr: increase(falcosidekick_falco_events_total{priority=~"emergency|alert|critical|error"}[5m]) > 0
+      for: 0m
+      labels:
+        severity: critical
+        source: falco
+      annotations:
+        summary: "Falco critical security event"
+        description: "Rule: {{ $labels.rule }} | Priority: {{ $labels.priority }} | Host: {{ $labels.hostname }}"
+
+    - alert: FalcoWarningEvent
+      expr: increase(falcosidekick_falco_events_total{priority="warning"}[5m]) > 0
+      for: 0m
+      labels:
+        severity: warning
+        source: falco
+      annotations:
+        summary: "Falco warning security event"
+        description: "Rule: {{ $labels.rule }} | Priority: {{ $labels.priority }} | Host: {{ $labels.hostname }}"

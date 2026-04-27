@@ -5,7 +5,7 @@ helm upgrade falco falcosecurity/falco \
 --set-file customRules."local_rules\.yaml"=./falco_rules.local.yaml
 
 
-# Web hook receiver deployment
+# Web hook receiver deployment (kept for debugging)
 kubectl create deployment webhook-receiver \
 --namespace falco-system \
 --image=mendhak/http-https-echo:latest \
@@ -14,3 +14,14 @@ kubectl create deployment webhook-receiver \
 kubectl expose deployment webhook-receiver \
 --namespace falco-system \
 --port=8080
+
+
+# Prometheus/Alertmanager integration
+kubectl apply -f servicemonitor.yaml
+kubectl apply -f prometheusrule.yaml
+kubectl apply -f alertmanagerconfig.yaml
+
+# Verify
+# kubectl get servicemonitor -n falco-system
+# kubectl get prometheusrule -n falco-system
+# kubectl get alertmanagerconfig -n falco-system
