@@ -98,6 +98,8 @@ kind: Service
 metadata:
   name: teams-api-service
   namespace: teams-api
+  labels:
+    app: teams-api
 spec:
   selector:
     app: teams-api
