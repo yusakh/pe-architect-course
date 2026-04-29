@@ -1,0 +1,27 @@
+# Jaeger all-in-one: in-memory storage, suitable for workshop
+provisionDataStore:
+  cassandra: false
+  elasticsearch: false
+
+allInOne:
+  enabled: true
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: traefik
+      traefik.ingress.kubernetes.io/router.entrypoints: web
+    hosts:
+      - jaeger.127.0.0.1.sslip.io
+
+storage:
+  type: memory
+
+# Disable standalone components — all-in-one handles everything
+collector:
+  enabled: false
+
+query:
+  enabled: false
+
+agent:
+  enabled: false

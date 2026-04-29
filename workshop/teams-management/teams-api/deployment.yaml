@@ -51,6 +51,11 @@ spec:
         #   value: "info"
         # - name: CORS_ORIGINS
         #   value: "*"
+        - name: OTEL_SERVICE_NAME
+          value: "teams-api"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          # update after: kubectl get svc -n jaeger-system
+          value: "http://jaeger-all-in-one.jaeger-system.svc.cluster.local:4318"
         securityContext:
           runAsNonRoot: true
           runAsUser: 1001
@@ -98,7 +103,8 @@ spec:
   selector:
     app: teams-api
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 4200
       targetPort: 8000
   type: ClusterIP

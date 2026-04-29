@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: teams-api
+  namespace: teams-api
+  labels:
+    release: grafana-stack  # must match Prometheus serviceMonitorSelector
+spec:
+  namespaceSelector:
+    matchNames:
+    - teams-api
+  selector:
+    matchLabels:
+      app: teams-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s

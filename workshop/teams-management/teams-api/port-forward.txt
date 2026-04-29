@@ -1,0 +1,51 @@
+On the remote host (run these in background or separate terminals):  
+  
+  # Teams API
+  kubectl port-forward -n teams-api svc/teams-api-service 3002:4200
+
+  # Grafana
+  kubectl port-forward -n monitoring svc/grafana-stack 3000:80
+
+  # Prometheus
+  kubectl port-forward -n monitoring svc/grafana-stack-kube-prometh-prometheus 9090:9090
+
+  # Alertmanager
+  kubectl port-forward -n monitoring svc/grafana-stack-kube-prometh-alertmanager 9093:9093
+
+  # Falcosidekick (metrics + UI)
+  kubectl port-forward -n falco-system svc/falco-falcosidekick 2801:2801
+
+  # Jaeger UI (verify service name first: kubectl get svc -n jaeger-system)
+  kubectl port-forward -n jaeger-system svc/jaeger-query 16686:16686
+
+  ┌───────────────┬────────────────────────────────────────────────────────────────────────────┬───────────────────────────────────────────┐
+  │    Service    │                                On workspace                                │             On local machine              │
+  ├───────────────┼────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────┤
+  │ Teams API     │ kubectl port-forward -n teams-api svc/teams-api-service 3002:4200 &        │ coder port-forward 0416-yusakh-arch --tcp │
+  │               │                                                                            │  3002:3002 &                              │
+  ├───────────────┼────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────┤
+  │ Grafana       │ kubectl port-forward -n monitoring svc/grafana-stack 3000:80 &             │ coder port-forward 0416-yusakh-arch --tcp │
+  │               │                                                                            │  3000:3000 &                              │
+  ├───────────────┼────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────┤
+  │ Prometheus    │ kubectl port-forward -n monitoring                                         │ coder port-forward 0416-yusakh-arch --tcp │
+  │               │ svc/grafana-stack-kube-prometh-prometheus 9090:9090 &                      │  9090:9090 &                              │
+  ├───────────────┼────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────┤
+  │ Alertmanager  │ kubectl port-forward -n monitoring                                         │ coder port-forward 0416-yusakh-arch --tcp │
+  │               │ svc/grafana-stack-kube-prometh-alertmanager 9093:9093 &                    │  9093:9093 &                              │
+  ├───────────────┼────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────┤
+  │ Falcosidekick │ kubectl port-forward -n falco-system svc/falco-falcosidekick 2801:2801 &   │ coder port-forward 0416-yusakh-arch --tcp │
+  │               │                                                                            │  2801:2801 &                              │
+  ├───────────────┼────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────┤
+  │ Jaeger        │ kubectl port-forward -n jaeger-system svc/jaeger-query 16686:16686 &       │ coder port-forward 0416-yusakh-arch --tcp │
+  │               │                                                                            │  16686:16686 &                            │
+  └───────────────┴────────────────────────────────────────────────────────────────────────────┴───────────────────────────────────────────┘
+
+  Or batch the coder port-forward into one command:
+
+  coder port-forward 0416-yusakh-arch \
+    --tcp 3002:3002 \
+    --tcp 3000:3000 \
+    --tcp 9090:9090 \
+    --tcp 9093:9093 \
+    --tcp 2801:2801 \
+    --tcp 16686:16686 &

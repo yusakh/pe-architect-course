@@ -1,0 +1,15 @@
+# Loki-stack: bundles Loki + Promtail
+# Grafana and Prometheus reuse existing installs in monitoring namespace
+loki:
+  enabled: true
+  persistence:
+    enabled: false  # in-memory for workshop, data lost on restart
+
+promtail:
+  enabled: true
+
+grafana:
+  enabled: false  # already installed via kube-prometheus-stack
+
+prometheus:
+  enabled: false  # already installed via kube-prometheus-stack
