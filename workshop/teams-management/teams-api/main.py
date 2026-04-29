@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List
 import uuid
@@ -12,8 +14,18 @@ DB_PATH = os.getenv("DB_PATH", "/data/teams.db")
 app = FastAPI(
     title="Teams API",
     description="A simple API for team leads to create and manage teams",
-    version="1.0.0"
+    version="1.0.0",
+    redoc_url=None  # disabled to allow custom JS URL below
 )
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html() -> HTMLResponse:
+    return get_redoc_html(
+        openapi_url="/openapi.json",
+        title="Teams API - ReDoc",
+        redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@2.1.5/bundles/redoc.standalone.js",
+    )
+
 
 # Configure CORS
 app.add_middleware(
