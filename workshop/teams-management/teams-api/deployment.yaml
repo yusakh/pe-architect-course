@@ -54,8 +54,7 @@ spec:
         - name: OTEL_SERVICE_NAME
           value: "teams-api"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          # update after: kubectl get svc -n jaeger-system
-          value: "http://jaeger-all-in-one.jaeger-system.svc.cluster.local:4318"
+          value: "http://jaeger.jaeger-system.svc.cluster.local:4318"
         securityContext:
           runAsNonRoot: true
           runAsUser: 1001

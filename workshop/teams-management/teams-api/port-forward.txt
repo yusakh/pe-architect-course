@@ -36,7 +36,7 @@ On the remote host (run these in background or separate terminals):
   │ Falcosidekick │ kubectl port-forward -n falco-system svc/falco-falcosidekick 2801:2801 &   │ coder port-forward 0416-yusakh-arch --tcp │
   │               │                                                                            │  2801:2801 &                              │
   ├───────────────┼────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────┤
-  │ Jaeger        │ kubectl port-forward -n jaeger-system svc/jaeger-query 16686:16686 &       │ coder port-forward 0416-yusakh-arch --tcp │
+  │ Jaeger        │ kubectl port-forward -n jaeger-system svc/jaeger 16686:16686 &             │ coder port-forward 0416-yusakh-arch --tcp │
   │               │                                                                            │  16686:16686 &                            │
   └───────────────┴────────────────────────────────────────────────────────────────────────────┴───────────────────────────────────────────┘
 
