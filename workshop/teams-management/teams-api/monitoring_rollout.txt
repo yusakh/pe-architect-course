@@ -1,0 +1,31 @@
+  # 1. Install Jaeger
+  helm repo add jaegertracing https://jaegertracing.github.io/helm-charts
+  helm repo update
+  helm upgrade --install jaeger jaegertracing/jaeger \
+    --namespace jaeger-system --create-namespace \
+    --values jaeger-values.yaml
+
+  # Verify service name for OTLP endpoint
+  kubectl get svc -n jaeger-system
+
+  # 2. Install Loki + Promtail
+  helm repo add grafana https://grafana.github.io/helm-charts
+  helm repo update
+  helm upgrade --install loki grafana/loki-stack \
+    --namespace monitoring \
+    --values loki-stack-values.yaml
+
+  # 3. Add Loki datasource to Grafana
+  kubectl apply -f loki-datasource.yaml
+
+  # 4. Add ServiceMonitor for app metrics
+  kubectl apply -f servicemonitor-app.yaml
+
+  # 5. Build and deploy app
+  docker build -t teams-api:local .
+  kind load docker-image teams-api:local --name 5min-idp
+  kubectl apply -f deployment.yaml
+  kubectl rollout restart deployment/teams-api -n teams-api
+
+  After Jaeger is up, check the service name and update OTEL_EXPORTER_OTLP_ENDPOINT in deployment.yaml if it differs from
+  jaeger.jaeger-system.svc.cluster.local.
