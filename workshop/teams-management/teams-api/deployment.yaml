@@ -55,6 +55,11 @@ spec:
           value: "teams-api"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://jaeger.jaeger-system.svc.cluster.local:4318"
+        - name: API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: teams-api-secret
+              key: api-token
         securityContext:
           runAsNonRoot: true
           runAsUser: 1001

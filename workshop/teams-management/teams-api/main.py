@@ -1,13 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import HTMLResponse, Response
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List
 import uuid
 from datetime import datetime
 import sqlite3
 import os
+import secrets
 
 # OTel - tracing
 from opentelemetry import trace
@@ -34,6 +36,7 @@ import structlog
 
 DB_PATH = os.getenv("DB_PATH", "/data/teams.db")
 SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "teams-api")
+API_TOKEN = os.getenv("API_TOKEN")
 # OTEL_EXPORTER_OTLP_ENDPOINT is read automatically by the OTel SDK from env
 
 # --- OTel setup ---
@@ -86,6 +89,17 @@ structlog.configure(
 )
 
 log = structlog.get_logger()
+
+# --- Auth ---
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Security(_bearer_scheme)):
+    if not API_TOKEN:
+        return  # auth disabled — no API_TOKEN configured
+    if not credentials or not secrets.compare_digest(credentials.credentials, API_TOKEN):
+        log.warning("unauthorized_request")
+        raise HTTPException(status_code=401, detail="Invalid or missing token")
 
 # --- App ---
 
@@ -142,7 +156,10 @@ class Team(BaseModel):
 @app.on_event("startup")
 def startup():
     init_db()
-    log.info("startup_complete", db_path=DB_PATH)
+    if API_TOKEN:
+        log.info("startup_complete", db_path=DB_PATH, auth="enabled")
+    else:
+        log.warning("startup_complete", db_path=DB_PATH, auth="disabled — set API_TOKEN to enable")
 
 
 @app.get("/redoc", include_in_schema=False)
@@ -165,7 +182,7 @@ async def root():
     return {"message": "Teams API is running"}
 
 
-@app.post("/teams", response_model=Team)
+@app.post("/teams", response_model=Team, dependencies=[Depends(verify_token)])
 async def create_team(team: TeamCreate):
     """Create a new team"""
     log.info("create_team", name=team.name)
@@ -193,7 +210,7 @@ async def create_team(team: TeamCreate):
     return Team(id=team_id, name=team.name, created_at=created_at)
 
 
-@app.get("/teams", response_model=List[Team])
+@app.get("/teams", response_model=List[Team], dependencies=[Depends(verify_token)])
 async def get_teams():
     """Get all teams"""
     conn = get_db()
@@ -207,7 +224,7 @@ async def get_teams():
     return [Team(**dict(row)) for row in rows]
 
 
-@app.get("/teams/{team_id}", response_model=Team)
+@app.get("/teams/{team_id}", response_model=Team, dependencies=[Depends(verify_token)])
 async def get_team(team_id: str):
     """Get a specific team by ID"""
     conn = get_db()
@@ -224,7 +241,7 @@ async def get_team(team_id: str):
     return Team(**dict(row))
 
 
-@app.delete("/teams/{team_id}")
+@app.delete("/teams/{team_id}", dependencies=[Depends(verify_token)])
 async def delete_team(team_id: str):
     """Delete a team"""
     conn = get_db()

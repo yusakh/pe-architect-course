@@ -5,29 +5,35 @@ Teams CLI - A simple command-line interface for the Teams API
 
 import argparse
 import json
+import os
 import sys
 import requests
 from typing import Optional
 
-API_BASE_URL = "http://teams-api.127.0.0.1.sslip.io"
+#API_BASE_URL = "http://teams-api.127.0.0.1.sslip.io"
+API_BASE_URL = os.environ.get("TEAMS_API_URL", "http://0416-yusakh-arch.coder:3002")
 
 class TeamsAPI:
-    def __init__(self, base_url: str = API_BASE_URL):
+    def __init__(self, base_url: str = API_BASE_URL, token: Optional[str] = None):
         self.base_url = base_url
-        
+        self.token = token
+
     def _make_request(self, method: str, endpoint: str, data: Optional[dict] = None) -> dict:
         """Make HTTP request to the API"""
         url = f"{self.base_url}{endpoint}"
+        headers = {"Content-Type": "application/json"}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
         try:
             if method == "GET":
-                response = requests.get(url)
+                response = requests.get(url, headers=headers)
             elif method == "POST":
-                response = requests.post(url, json=data, headers={"Content-Type": "application/json"})
+                response = requests.post(url, json=data, headers=headers)
             elif method == "DELETE":
-                response = requests.delete(url)
+                response = requests.delete(url, headers=headers)
             else:
                 raise ValueError(f"Unsupported method: {method}")
-                
+
             response.raise_for_status()
             return response.json()
         except requests.exceptions.ConnectionError:
@@ -38,6 +44,8 @@ class TeamsAPI:
             if response.status_code == 400:
                 error_detail = response.json().get("detail", "Bad request")
                 print(f"❌ Error: {error_detail}")
+            elif response.status_code == 401:
+                print("❌ Error: Unauthorized — set TEAMS_API_TOKEN env var or use --token")
             elif response.status_code == 404:
                 print("❌ Error: Team not found")
             else:
@@ -104,9 +112,14 @@ Examples:
     )
     
     parser.add_argument(
-        "--url", 
+        "--url",
         default=API_BASE_URL,
-        help=f"API base URL (default: {API_BASE_URL})"
+        help=f"API base URL (default: TEAMS_API_URL env var or {API_BASE_URL})"
+    )
+    parser.add_argument(
+        "--token",
+        default=os.environ.get("TEAMS_API_TOKEN"),
+        help="Bearer token for API auth (default: TEAMS_API_TOKEN env var)"
     )
     
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -136,7 +149,7 @@ Examples:
         return
     
     # Initialize API client
-    api = TeamsAPI(args.url)
+    api = TeamsAPI(args.url, token=args.token)
     
     # Execute command
     try:
