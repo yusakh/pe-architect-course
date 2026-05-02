@@ -21,7 +21,12 @@
   # 4. Add ServiceMonitor for app metrics
   kubectl apply -f servicemonitor-app.yaml
 
-  # 5. Build and deploy app
+  # 5. Create token secret (one-time)
+  kubectl create secret generic teams-api-secret \
+    --from-literal=api-token=<your-token> \
+    -n teams-api
+
+  # 6. Build and deploy app
   docker build -t teams-api:local .
   kind load docker-image teams-api:local --name 5min-idp
   kubectl apply -f deployment.yaml

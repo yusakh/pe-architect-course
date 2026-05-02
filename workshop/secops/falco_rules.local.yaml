@@ -1,3 +1,9 @@
+- macro: user_known_contact_k8s_api_server_activities
+  condition: >
+    or container.image.repository = "quay.io/kiwigrid/k8s-sidecar"
+  override:
+    condition: append
+
 - macro: known_drop_and_execute_activities
   condition: >
     or not k8s.pod.name exists

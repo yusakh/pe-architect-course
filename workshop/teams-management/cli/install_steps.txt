@@ -1,0 +1,20 @@
+  # 1. Create the secret (pick a strong token)
+  kubectl create secret generic teams-api-secret \
+    --from-literal=api-token=<your-token> \
+    -n teams-api
+
+  # 2. Rebuild and redeploy
+  docker build -t teams-api:local .
+  kind load docker-image teams-api:local --name 5min-idp
+  kubectl rollout restart deployment/teams-api -n teams-api
+
+  # 3. Verify the pod comes up
+  kubectl get pods -n teams-api
+
+  # 4. Test from local machine
+  export TEAMS_API_TOKEN=<your-token>
+  python teams_cli.py list
+
+  # Should fail without token:
+  python teams_cli.py --token "" list
+  # ❌ Error: Unauthorized — set TEAMS_API_TOKEN env var or use --token
