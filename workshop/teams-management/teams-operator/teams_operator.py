@@ -24,6 +24,7 @@ class TeamsOperator:
     def __init__(self):
         self.teams_api_url = os.getenv('TEAMS_API_URL', 'http://teams-api-service:80')
         self.poll_interval = int(os.getenv('POLL_INTERVAL', '30'))  # seconds
+        self.api_token = os.getenv('TEAMS_API_TOKEN')
         self.known_teams: Set[str] = set()
         self.team_namespaces: Dict[str, str] = {}
         
@@ -49,20 +50,23 @@ class TeamsOperator:
         # Ensure it starts and ends with alphanumeric
         namespace = namespace.strip('-')
         
+        # Add prefix to avoid conflicts
+        namespace = f"team-{namespace}"
+
         # Kubernetes namespace names must be <= 63 characters
         if len(namespace) > 63:
             namespace = namespace[:63].rstrip('-')
-            
-        # Add prefix to avoid conflicts
-        namespace = f"team-{namespace}"
         
         return namespace
     
     async def fetch_teams(self) -> list:
         """Fetch current teams from the Teams API"""
+        headers = {}
+        if self.api_token:
+            headers["Authorization"] = f"Bearer {self.api_token}"
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.teams_api_url}/teams") as response:
+                async with session.get(f"{self.teams_api_url}/teams", headers=headers) as response:
                     if response.status == 200:
                         teams = await response.json()
                         logger.debug(f"Fetched {len(teams)} teams from API")
