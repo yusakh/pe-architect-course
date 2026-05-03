@@ -148,7 +148,15 @@ class TeamsOperator:
         teams = await self.fetch_teams()
         current_teams = {team['id']: team for team in teams}
         current_team_ids = set(current_teams.keys())
-        
+
+        # On first run after restart, seed state from API + actual cluster state
+        if not self.known_teams:
+            for team_id, team in current_teams.items():
+                namespace_name = self.sanitize_namespace_name(team['name'])
+                if self.namespace_exists(namespace_name):
+                    self.known_teams.add(team_id)
+                    self.team_namespaces[team_id] = namespace_name
+
         # Create namespace for new teams or teams whose namespace was deleted externally
         created_teams = []
         for team_id in current_team_ids:
@@ -158,8 +166,8 @@ class TeamsOperator:
 
             if not self.namespace_exists(namespace_name):
                 if self.create_namespace(team_id, team_name, namespace_name):
-                    self.team_namespaces[team_id] = namespace_name
                     created_teams.append(team_id)
+            self.team_namespaces[team_id] = namespace_name
 
         # Handle deleted teams (remove namespaces)
         deleted_teams = self.known_teams - current_team_ids
