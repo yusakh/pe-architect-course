@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import time
-from typing import Set, Dict, Any
+from typing import Any
 import aiohttp
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -25,8 +25,6 @@ class TeamsOperator:
         self.teams_api_url = os.getenv('TEAMS_API_URL', 'http://teams-api-service:80')
         self.poll_interval = int(os.getenv('POLL_INTERVAL', '30'))  # seconds
         self.api_token = os.getenv('TEAMS_API_TOKEN')
-        self.known_teams: Set[str] = set()
-        self.team_namespaces: Dict[str, str] = {}
         
         # Initialize Kubernetes client
         try:
@@ -149,42 +147,28 @@ class TeamsOperator:
         current_teams = {team['id']: team for team in teams}
         current_team_ids = set(current_teams.keys())
 
-        # On first run after restart, seed state from API + actual cluster state
-        if not self.known_teams:
-            for team_id, team in current_teams.items():
-                namespace_name = self.sanitize_namespace_name(team['name'])
-                if self.namespace_exists(namespace_name):
-                    self.known_teams.add(team_id)
-                    self.team_namespaces[team_id] = namespace_name
-
         # Create namespace for new teams or teams whose namespace was deleted externally
-        created_teams = []
+        created_namespaces = []
         for team_id in current_team_ids:
             team = current_teams[team_id]
-            team_name = team['name']
-            namespace_name = self.sanitize_namespace_name(team_name)
-
+            namespace_name = self.sanitize_namespace_name(team['name'])
             if not self.namespace_exists(namespace_name):
-                if self.create_namespace(team_id, team_name, namespace_name):
-                    created_teams.append(team_id)
-            self.team_namespaces[team_id] = namespace_name
+                if self.create_namespace(team_id, team['name'], namespace_name):
+                    created_namespaces.append(namespace_name)
 
-        # Handle deleted teams (remove namespaces)
-        deleted_teams = self.known_teams - current_team_ids
-        for team_id in deleted_teams:
-            if team_id in self.team_namespaces:
-                namespace_name = self.team_namespaces[team_id]
-                # Get team name from namespace annotations if possible
-                team_name = f"team-{team_id}"  # fallback
+        # Delete namespaces for teams no longer in API, identified by operator label
+        deleted_namespaces = []
+        managed = self.k8s_core_v1.list_namespace(
+            label_selector="app.kubernetes.io/managed-by=teams-operator"
+        )
+        for ns in managed.items:
+            team_id = ns.metadata.labels.get("teams.example.com/team-id")
+            if team_id and team_id not in current_team_ids:
+                if self.delete_namespace(ns.metadata.name, ns.metadata.name):
+                    deleted_namespaces.append(ns.metadata.name)
 
-                if self.delete_namespace(namespace_name, team_name):
-                    del self.team_namespaces[team_id]
-
-        # Update known teams
-        self.known_teams = current_team_ids
-
-        if created_teams or deleted_teams:
-            logger.info(f"📊 Reconciliation complete: {len(current_teams)} teams, {len(self.team_namespaces)} namespaces")
+        if created_namespaces or deleted_namespaces:
+            logger.info(f"📊 Reconciliation complete: {len(current_teams)} teams, created={created_namespaces}, deleted={deleted_namespaces}")
     
     async def run(self):
         """Main operator loop"""
