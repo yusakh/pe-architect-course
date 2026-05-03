@@ -68,7 +68,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: teams-operator
-        image: olivercodes01/teams-operator:0.0.1
+        image: teams-operator:local
         env:
         - name: TEAMS_API_URL
           value: "http://teams-api-service.teams-api.svc.cluster.local:4200"

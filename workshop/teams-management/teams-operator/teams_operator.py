@@ -81,6 +81,15 @@ class TeamsOperator:
             logger.error(f"Unexpected error fetching teams: {e}")
             return []
     
+    def namespace_exists(self, namespace_name: str) -> bool:
+        try:
+            self.k8s_core_v1.read_namespace(name=namespace_name)
+            return True
+        except ApiException as e:
+            if e.status == 404:
+                return False
+            raise
+
     def create_namespace(self, team_id: str, team_name: str, namespace_name: str) -> bool:
         """Create a Kubernetes namespace for the team"""
         try:
@@ -140,16 +149,18 @@ class TeamsOperator:
         current_teams = {team['id']: team for team in teams}
         current_team_ids = set(current_teams.keys())
         
-        # Handle new teams (create namespaces)
-        new_teams = current_team_ids - self.known_teams
-        for team_id in new_teams:
+        # Create namespace for new teams or teams whose namespace was deleted externally
+        created_teams = []
+        for team_id in current_team_ids:
             team = current_teams[team_id]
             team_name = team['name']
             namespace_name = self.sanitize_namespace_name(team_name)
-            
-            if self.create_namespace(team_id, team_name, namespace_name):
-                self.team_namespaces[team_id] = namespace_name
-        
+
+            if not self.namespace_exists(namespace_name):
+                if self.create_namespace(team_id, team_name, namespace_name):
+                    self.team_namespaces[team_id] = namespace_name
+                    created_teams.append(team_id)
+
         # Handle deleted teams (remove namespaces)
         deleted_teams = self.known_teams - current_team_ids
         for team_id in deleted_teams:
@@ -157,14 +168,14 @@ class TeamsOperator:
                 namespace_name = self.team_namespaces[team_id]
                 # Get team name from namespace annotations if possible
                 team_name = f"team-{team_id}"  # fallback
-                
+
                 if self.delete_namespace(namespace_name, team_name):
                     del self.team_namespaces[team_id]
-        
+
         # Update known teams
         self.known_teams = current_team_ids
-        
-        if new_teams or deleted_teams:
+
+        if created_teams or deleted_teams:
             logger.info(f"📊 Reconciliation complete: {len(current_teams)} teams, {len(self.team_namespaces)} namespaces")
     
     async def run(self):
