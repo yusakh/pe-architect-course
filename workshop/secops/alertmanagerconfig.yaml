@@ -31,6 +31,13 @@ spec:
     - apiURL:
         name: discord-webhook-secret
         key: url
-      title: '{{ .CommonAnnotations.summary }}'
-      message: '{{ range .Alerts }}{{ .Annotations.description }}{{ "\n" }}{{ end }}'
+      title: '{{ if eq .CommonLabels.severity "critical" }}🔴{{ else }}⚠️{{ end }} {{ .CommonAnnotations.summary }} ({{ len .Alerts }} event{{ if gt (len .Alerts) 1 }}s{{ end }})'
+      message: |
+        {{ range .Alerts -}}
+        **Rule:** `{{ .Labels.rule }}`
+        **Priority:** `{{ .Labels.priority_raw }}`
+        **Host:** `{{ .Labels.hostname }}`
+        **Fired:** {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+        {{ if .GeneratorURL }}🔗 [View in Prometheus]({{ .GeneratorURL }}){{ end }}
+        {{ end }}
       sendResolved: false

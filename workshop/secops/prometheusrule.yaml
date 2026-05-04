@@ -16,8 +16,8 @@ spec:
         severity: critical
         source: falco
       annotations:
-        summary: "Falco critical security event"
-        description: "Rule: {{ $labels.rule }} | Priority: {{ $labels.priority_raw }} | Host: {{ $labels.hostname }}"
+        summary: "Falco Critical: {{ $labels.rule }}"
+        description: "Rule '{{ $labels.rule }}' fired at {{ $labels.priority_raw }} level on {{ $labels.hostname }}"
 
     - alert: FalcoWarningEvent
       expr: increase(falcosecurity_falcosidekick_falco_events_total{priority_raw="warning"}[5m]) > 0
@@ -26,5 +26,5 @@ spec:
         severity: warning
         source: falco
       annotations:
-        summary: "Falco warning security event"
-        description: "Rule: {{ $labels.rule }} | Priority: {{ $labels.priority_raw }} | Host: {{ $labels.hostname }}"
+        summary: "Falco Warning: {{ $labels.rule }}"
+        description: "Rule '{{ $labels.rule }}' fired at {{ $labels.priority_raw }} level on {{ $labels.hostname }}"
