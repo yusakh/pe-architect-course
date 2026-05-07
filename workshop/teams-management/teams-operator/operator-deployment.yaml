@@ -17,6 +17,9 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create"]
+- apiGroups: ["constraints.gatekeeper.sh"]
+  resources: ["falcorootpreventions"]
+  verbs: ["get", "patch", "update"]
 ---
 # ClusterRoleBinding to grant permissions
 apiVersion: rbac.authorization.k8s.io/v1
