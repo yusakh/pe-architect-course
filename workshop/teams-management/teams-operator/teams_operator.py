@@ -20,6 +20,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger('teams-operator')
 
+CONSTRAINT_GROUP   = "constraints.gatekeeper.sh"
+CONSTRAINT_VERSION = "v1beta1"
+CONSTRAINT_PLURAL  = "falcorootpreventions"
+CONSTRAINT_NAME    = "enforce-falco-root-prevention"
+
 class TeamsOperator:
     def __init__(self):
         self.teams_api_url = os.getenv('TEAMS_API_URL', 'http://teams-api-service:80')
@@ -39,11 +44,6 @@ class TeamsOperator:
         self.k8s_core_v1 = client.CoreV1Api()
         self.k8s_custom = client.CustomObjectsApi()
 
-CONSTRAINT_GROUP   = "constraints.gatekeeper.sh"
-CONSTRAINT_VERSION = "v1beta1"
-CONSTRAINT_PLURAL  = "falcorootpreventions"
-CONSTRAINT_NAME    = "enforce-falco-root-prevention"
-        
     def sanitize_namespace_name(self, team_name: str) -> str:
         """Convert team name to valid Kubernetes namespace name"""
         # Lowercase, replace spaces/special chars with hyphens, remove consecutive hyphens
