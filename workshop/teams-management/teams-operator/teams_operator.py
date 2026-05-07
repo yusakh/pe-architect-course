@@ -22,7 +22,7 @@ logger = logging.getLogger('teams-operator')
 
 CONSTRAINT_GROUP   = "constraints.gatekeeper.sh"
 CONSTRAINT_VERSION = "v1beta1"
-CONSTRAINT_PLURAL  = "falcorootpreventions"
+CONSTRAINT_PLURAL  = "falcorootprevention"
 CONSTRAINT_NAME    = "enforce-falco-root-prevention"
 
 class TeamsOperator:
