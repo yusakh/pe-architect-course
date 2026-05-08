@@ -18,9 +18,17 @@ spec:
         app: teams-api
         component: backend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
       - name: teams-api
         image: teams-api:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
         ports:
         - containerPort: 8000
         env:
