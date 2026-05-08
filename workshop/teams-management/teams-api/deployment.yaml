@@ -40,6 +40,7 @@ spec:
       - name: teams-api
 #        image: olivercodes01/teams-api:0.0.2
         image: teams-api:local
+        imagePullPolicy: Never
         ports:
         - containerPort: 8000
         env:

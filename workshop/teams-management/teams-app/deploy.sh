@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 NAMESPACE="engineering-platform"
 UI_IMAGE="teams-ui:latest"
-API_IMAGE="teams-api:latest"
+API_IMAGE="teams-api:local"
 
 # Functions
 log_info() {
@@ -90,12 +90,9 @@ build_images() {
     log_info "Building UI Docker image..."
     docker build -t $UI_IMAGE .
 
-    # Build API image (assuming API Dockerfile exists)
-    if [ -f "api.Dockerfile" ]; then
-        log_info "Building API Docker image..."
-        docker build -f api.Dockerfile -t $API_IMAGE .
-    else
-        log_warning "API Dockerfile not found. Make sure API image is available"
+    # API image is built separately from teams-api/ — load_images will load it into kind if available
+    if ! docker image inspect $API_IMAGE &>/dev/null; then
+        log_warning "API image '$API_IMAGE' not found locally. Build it from teams-api/ first."
     fi
 
     log_success "Docker images built successfully"
