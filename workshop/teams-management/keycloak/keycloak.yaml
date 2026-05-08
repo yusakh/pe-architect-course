@@ -85,19 +85,21 @@ data:
           "redirectUris": [
             "http://platform-auth.127.0.0.1.sslip.io/*",
             "http://teams-ui.127.0.0.1.sslip.io/*",
+            "http://teams-ui.127.0.0.1.sslip.io:8080/*",
             "http://localhost:4200/*",
             "http://localhost:8080/*"
           ],
           "webOrigins": [
             "http://platform-auth.127.0.0.1.sslip.io",
             "http://teams-ui.127.0.0.1.sslip.io",
+            "http://teams-ui.127.0.0.1.sslip.io:8080",
             "http://localhost:4200",
             "http://localhost:8080"
           ],
           "publicClient": true,
           "protocol": "openid-connect",
           "attributes": {
-            "post.logout.redirect.uris": "http://platform-auth.127.0.0.1.sslip.io/*##http://teams-ui.127.0.0.1.sslip.io/*##http://localhost:4200/*##http://localhost:8080/*"
+            "post.logout.redirect.uris": "http://platform-auth.127.0.0.1.sslip.io/*##http://teams-ui.127.0.0.1.sslip.io/*##http://teams-ui.127.0.0.1.sslip.io:8080/*##http://localhost:4200/*##http://localhost:8080/*"
           }
         }
       ],
