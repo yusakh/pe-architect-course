@@ -262,8 +262,7 @@ metadata:
   name: keycloak-ingress
   namespace: keycloak
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-    kubernetes.io/ingress.class: traefik
+    kubernetes.io/ingress.class: nginx
 spec:
   rules:
   - host: platform-auth.127.0.0.1.sslip.io
