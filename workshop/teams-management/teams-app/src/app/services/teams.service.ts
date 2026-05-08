@@ -49,7 +49,6 @@ export class TeamsService {
     
     if (error.status === 401) {
       errorMessage = 'Unauthorized. Please log in again.';
-      this.authService.login();
     } else if (error.status === 403) {
       errorMessage = 'Forbidden. You don\'t have permission for this action.';
     } else if (error.error instanceof ErrorEvent) {
