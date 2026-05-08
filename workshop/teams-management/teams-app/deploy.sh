@@ -105,9 +105,9 @@ build_images() {
 load_images() {
     if kubectl config current-context 2>/dev/null | grep -q "kind"; then
         log_info "kind cluster detected — loading images..."
-        kind load docker-image $UI_IMAGE
+        kind load docker-image $UI_IMAGE --name 5min-idp
         if docker image inspect $API_IMAGE &>/dev/null; then
-            kind load docker-image $API_IMAGE
+            kind load docker-image $API_IMAGE --name 5min-idp
         fi
         log_success "Images loaded into kind cluster"
     else
@@ -207,6 +207,7 @@ case "${1:-deploy}" in
     "build")
         build_ui
         build_images
+        load_images
         ;;
     *)
         echo "Usage: $0 {deploy|rollback|cleanup|status|build}"

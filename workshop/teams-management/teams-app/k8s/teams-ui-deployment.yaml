@@ -27,6 +27,7 @@ spec:
       containers:
       - name: teams-ui
         image: teams-ui:latest
+        imagePullPolicy: Never
         securityContext:
           runAsUser: 101
           runAsNonRoot: true

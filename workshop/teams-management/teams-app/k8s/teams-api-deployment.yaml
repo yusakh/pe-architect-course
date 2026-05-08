@@ -25,6 +25,7 @@ spec:
       containers:
       - name: teams-api
         image: teams-api:latest
+        imagePullPolicy: Never
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
