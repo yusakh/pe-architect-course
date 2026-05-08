@@ -101,6 +101,20 @@ build_images() {
     log_success "Docker images built successfully"
 }
 
+# Load images into kind cluster
+load_images() {
+    if kubectl config current-context 2>/dev/null | grep -q "kind"; then
+        log_info "kind cluster detected — loading images..."
+        kind load docker-image $UI_IMAGE
+        if docker image inspect $API_IMAGE &>/dev/null; then
+            kind load docker-image $API_IMAGE
+        fi
+        log_success "Images loaded into kind cluster"
+    else
+        log_info "Non-kind cluster — skipping kind image load"
+    fi
+}
+
 # Deploy to Kubernetes
 deploy_k8s() {
     log_info "Deploying to Kubernetes..."
@@ -169,6 +183,7 @@ deploy() {
     check_docker
     build_ui
     build_images
+    load_images
     deploy_k8s
     check_status
 
