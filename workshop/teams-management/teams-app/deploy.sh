@@ -127,7 +127,7 @@ deploy_k8s() {
 
     # Wait for deployments to be ready
     log_info "Waiting for deployments to be ready..."
-    kubectl wait --for=condition=available --timeout=300s deployment/teams-ui deployment/teams-api -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=300s deployment/teams-ui -n $NAMESPACE
 
     log_success "Deployments are ready"
 }

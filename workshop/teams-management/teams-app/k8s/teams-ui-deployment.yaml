@@ -39,7 +39,7 @@ spec:
         - containerPort: 8080
         env:
         - name: API_URL
-          value: "http://teams-api-service:4200"
+          value: "http://teams-api-service.teams-api.svc.cluster.local:4200"
         resources:
           requests:
             memory: "64Mi"
