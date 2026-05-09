@@ -75,11 +75,13 @@ kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/rele
 Verify the installation worked:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/master/docs/getting-started/basic/rollout.yaml
+# Use the local rollout-demo.yaml — it adds runAsUser: 1000 to satisfy the
+# enforce-falco-root-prevention Gatekeeper constraint (upstream YAML runs as root).
+kubectl apply -f rollout-demo.yaml
 kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/master/docs/getting-started/basic/service.yaml
 
 # Check the status of the deployment rollout
-kubectl describe rollout
+kubectl describe rollout rollouts-demo
 ```
 
 Add the Kubectl Argo Rollouts plugin to your Kubectl:
