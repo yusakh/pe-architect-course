@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequireArgoRollout
+metadata:
+  name: enforce-argo-rollout
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+    namespaces: []  # managed by teams-operator: populated when team namespaces are created

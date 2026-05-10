@@ -1,0 +1,71 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rollout-operator
+  namespace: rollout-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rollout-operator
+rules:
+- apiGroups: ["rollouts.platform.io"]
+  resources: ["rollouttemplates"]
+  verbs: ["get", "list"]
+- apiGroups: ["rollouts.platform.io"]
+  resources: ["rolloutrequests", "rolloutrequests/status"]
+  verbs: ["get", "list", "patch", "update"]
+- apiGroups: ["argoproj.io"]
+  resources: ["rollouts"]
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rollout-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rollout-operator
+subjects:
+- kind: ServiceAccount
+  name: rollout-operator
+  namespace: rollout-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rollout-operator
+  namespace: rollout-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rollout-operator
+  template:
+    metadata:
+      labels:
+        app: rollout-operator
+    spec:
+      serviceAccountName: rollout-operator
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+        runAsGroup: 1000
+      containers:
+      - name: rollout-operator
+        image: DOCKERHUB_USERNAME/rollout-operator:latest
+        env:
+        - name: POLL_INTERVAL
+          value: "15"
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 50m
+          limits:
+            memory: 128Mi
+            cpu: 100m
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true

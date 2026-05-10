@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { Team, TeamCreate } from '../models/team.model';
+import { Team, TeamCreate, RolloutTemplate, RolloutDeployment } from '../models/team.model';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -37,8 +37,37 @@ export class TeamsService {
   deleteTeam(teamId: string): Observable<any> {
     const url = `${this.apiUrl}/teams/${teamId}`;
     console.log('🗑️ Deleting team via API:', url);
-    
+
     return this.http.delete(url)
+      .pipe(catchError(this.handleError));
+  }
+
+  // Derive the team's Kubernetes namespace from its name (mirrors operator logic)
+  teamNamespace(teamName: string): string {
+    let ns = teamName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    ns = ns.replace(/-+/g, '-').replace(/^-|-$/g, '');
+    return `team-${ns}`.substring(0, 63);
+  }
+
+  getRolloutTemplates(): Observable<RolloutTemplate[]> {
+    return this.http.get<RolloutTemplate[]>(`${this.apiUrl}/rollout/templates`)
+      .pipe(catchError(this.handleError));
+  }
+
+  getDeployments(namespace: string): Observable<RolloutDeployment[]> {
+    return this.http.get<RolloutDeployment[]>(`${this.apiUrl}/rollout/namespaces/${namespace}/deployments`)
+      .pipe(catchError(this.handleError));
+  }
+
+  createDeployment(namespace: string, name: string, templateRef: string): Observable<RolloutDeployment> {
+    return this.http.post<RolloutDeployment>(
+      `${this.apiUrl}/rollout/namespaces/${namespace}/deployments/${name}`,
+      { templateRef }
+    ).pipe(catchError(this.handleError));
+  }
+
+  deleteDeployment(namespace: string, name: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/rollout/namespaces/${namespace}/deployments/${name}`)
       .pipe(catchError(this.handleError));
   }
 

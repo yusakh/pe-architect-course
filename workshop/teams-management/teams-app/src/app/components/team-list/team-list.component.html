@@ -1,8 +1,6 @@
 <!-- src/app/components/team-list/team-list.component.html -->
 <div class="team-list">
-  <div class="loading" *ngIf="isLoading">
-    Loading teams...
-  </div>
+  <div class="loading" *ngIf="isLoading">Loading teams...</div>
 
   <div class="error-message" *ngIf="errorMessage && !isLoading">
     {{ errorMessage }}
@@ -17,22 +15,85 @@
     <div class="team-card" *ngFor="let team of teams">
       <div class="team-header">
         <h3 class="team-name">{{ team.name }}</h3>
-        <button
-          class="btn btn-danger btn-sm"
-          (click)="deleteTeam(team.id, team.name)"
-          title="Delete team"
-        >
-          Delete
-        </button>
+        <div class="team-actions">
+          <button
+            class="btn btn-primary btn-sm"
+            (click)="openDeployModal(team)"
+            title="Deploy app in this namespace"
+          >
+            Deploy
+          </button>
+          <button
+            class="btn btn-danger btn-sm"
+            (click)="deleteTeam(team.id, team.name)"
+            title="Delete team"
+          >
+            Delete
+          </button>
+        </div>
       </div>
       <div class="team-details">
         <p class="team-id">ID: {{ team.id }}</p>
         <p class="team-created">Created: {{ formatDate(team.created_at) }}</p>
+        <p class="team-namespace">Namespace: {{ teamsService.teamNamespace(team.name) }}</p>
       </div>
     </div>
   </div>
 
   <div class="teams-count" *ngIf="!isLoading && teams.length > 0">
     Total teams: {{ teams.length }}
+  </div>
+</div>
+
+<!-- Deploy Modal -->
+<div class="modal-backdrop" *ngIf="deployModalTeam" (click)="closeDeployModal()"></div>
+<div class="modal" *ngIf="deployModalTeam">
+  <div class="modal-header">
+    <h3>Deploy to <strong>{{ teamsService.teamNamespace(deployModalTeam.name) }}</strong></h3>
+    <button class="modal-close" (click)="closeDeployModal()">✕</button>
+  </div>
+
+  <div class="modal-body">
+    <div class="error-message" *ngIf="deployError">{{ deployError }}</div>
+    <div class="success-message" *ngIf="deploySuccess">{{ deploySuccess }}</div>
+
+    <div class="form-group">
+      <label>Template</label>
+      <select [(ngModel)]="selectedTemplate" class="form-control">
+        <option *ngFor="let t of templates" [value]="t.name">
+          {{ t.name }} — {{ t.image }} ({{ t.strategy }})
+        </option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Deployment name</label>
+      <input
+        type="text"
+        [(ngModel)]="deployName"
+        class="form-control"
+        placeholder="e.g. my-app-v1"
+      />
+    </div>
+
+    <button
+      class="btn btn-primary"
+      (click)="submitDeploy()"
+      [disabled]="isDeploying || !selectedTemplate || !deployName"
+    >
+      {{ isDeploying ? 'Deploying…' : 'Deploy' }}
+    </button>
+
+    <!-- Active deployments in this namespace -->
+    <div class="deployments-section" *ngIf="deployments.length > 0">
+      <h4>Active deployments</h4>
+      <div class="deployment-row" *ngFor="let d of deployments">
+        <span class="deploy-name">{{ d.name }}</span>
+        <span class="deploy-template">{{ d.templateRef }}</span>
+        <span class="deploy-phase phase-{{ d.status.phase | lowercase }}">{{ d.status.phase }}</span>
+        <button class="btn btn-danger btn-xs" (click)="deleteDeployment(d.name)">Remove</button>
+      </div>
+    </div>
+    <p class="no-deployments" *ngIf="deployments.length === 0">No active deployments in this namespace.</p>
   </div>
 </div>

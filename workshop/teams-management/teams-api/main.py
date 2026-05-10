@@ -4,12 +4,15 @@ from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import HTMLResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime
 import sqlite3
 import os
 import secrets
+
+from kubernetes import client as k8s_client, config as k8s_config
+from kubernetes.client.rest import ApiException
 
 # OTel - tracing
 from opentelemetry import trace
@@ -35,6 +38,9 @@ import structlog
 # --- Configuration ---
 
 DB_PATH = os.getenv("DB_PATH", "/data/teams.db")
+ROLLOUT_TEMPLATE_NS = "rollout-system"
+PLATFORM_GROUP      = "rollouts.platform.io"
+PLATFORM_VERSION    = "v1alpha1"
 SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "teams-api")
 API_TOKEN = os.getenv("API_TOKEN")
 # OTEL_EXPORTER_OTLP_ENDPOINT is read automatically by the OTel SDK from env
@@ -153,9 +159,34 @@ class Team(BaseModel):
     created_at: datetime
 
 
+_k8s_custom: k8s_client.CustomObjectsApi | None = None
+
+
+def get_k8s() -> k8s_client.CustomObjectsApi:
+    global _k8s_custom
+    if _k8s_custom is None:
+        raise HTTPException(status_code=503, detail="Kubernetes client not available")
+    return _k8s_custom
+
+
+def _init_k8s():
+    global _k8s_custom
+    try:
+        k8s_config.load_incluster_config()
+    except k8s_config.ConfigException:
+        try:
+            k8s_config.load_kube_config()
+        except Exception:
+            log.warning("k8s_unavailable", detail="rollout endpoints will return 503")
+            return
+    _k8s_custom = k8s_client.CustomObjectsApi()
+    log.info("k8s_client_ready")
+
+
 @app.on_event("startup")
 def startup():
     init_db()
+    _init_k8s()
     if API_TOKEN:
         log.info("startup_complete", db_path=DB_PATH, auth="enabled")
     else:
@@ -270,6 +301,123 @@ async def health_check():
     count = conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0]
     conn.close()
     return {"status": "healthy", "teams_count": count}
+
+
+# ---------------------------------------------------------------------------
+# /rollout — template registry + deployment management (no auth required)
+# ---------------------------------------------------------------------------
+
+class RolloutTemplateOut(BaseModel):
+    name: str
+    image: str
+    strategy: str
+    replicas: int
+
+
+class RolloutRequestCreate(BaseModel):
+    templateRef: str
+    replicas: Optional[int] = None
+
+
+class RolloutRequestOut(BaseModel):
+    name: str
+    namespace: str
+    templateRef: str
+    status: dict
+
+
+@app.get("/rollout/templates", response_model=List[RolloutTemplateOut], tags=["rollout"])
+def list_rollout_templates(k8s=Depends(get_k8s)):
+    """List available RolloutTemplates from rollout-system."""
+    try:
+        result = k8s.list_namespaced_custom_object(
+            group=PLATFORM_GROUP, version=PLATFORM_VERSION,
+            namespace=ROLLOUT_TEMPLATE_NS, plural="rollouttemplates",
+        )
+    except ApiException as e:
+        raise HTTPException(status_code=502, detail=f"Kubernetes error: {e.reason}")
+
+    out = []
+    for item in result.get("items", []):
+        spec = item.get("spec", {})
+        out.append(RolloutTemplateOut(
+            name=item["metadata"]["name"],
+            image=spec.get("image", ""),
+            strategy=spec.get("strategy", {}).get("type", "Canary"),
+            replicas=spec.get("replicas", 2),
+        ))
+    return out
+
+
+@app.get("/rollout/namespaces/{namespace}/deployments", response_model=List[RolloutRequestOut], tags=["rollout"])
+def list_deployments(namespace: str, k8s=Depends(get_k8s)):
+    """List RolloutRequests in a team namespace."""
+    try:
+        result = k8s.list_namespaced_custom_object(
+            group=PLATFORM_GROUP, version=PLATFORM_VERSION,
+            namespace=namespace, plural="rolloutrequests",
+        )
+    except ApiException as e:
+        if e.status == 404:
+            return []
+        raise HTTPException(status_code=502, detail=f"Kubernetes error: {e.reason}")
+
+    return [
+        RolloutRequestOut(
+            name=item["metadata"]["name"],
+            namespace=namespace,
+            templateRef=item["spec"]["templateRef"],
+            status=item.get("status", {"phase": "Pending"}),
+        )
+        for item in result.get("items", [])
+    ]
+
+
+@app.post("/rollout/namespaces/{namespace}/deployments/{name}", response_model=RolloutRequestOut, status_code=201, tags=["rollout"])
+def create_deployment(namespace: str, name: str, body: RolloutRequestCreate, k8s=Depends(get_k8s)):
+    """Create a RolloutRequest in a team namespace from an existing template."""
+    spec: dict = {"templateRef": body.templateRef}
+    if body.replicas is not None:
+        spec["replicas"] = body.replicas
+
+    resource = {
+        "apiVersion": f"{PLATFORM_GROUP}/{PLATFORM_VERSION}",
+        "kind": "RolloutRequest",
+        "metadata": {"name": name, "namespace": namespace},
+        "spec": spec,
+    }
+    try:
+        k8s.create_namespaced_custom_object(
+            group=PLATFORM_GROUP, version=PLATFORM_VERSION,
+            namespace=namespace, plural="rolloutrequests", body=resource,
+        )
+    except ApiException as e:
+        if e.status == 409:
+            raise HTTPException(status_code=409, detail="Deployment already exists")
+        raise HTTPException(status_code=502, detail=f"Kubernetes error: {e.reason}")
+
+    log.info("rollout_request_created", namespace=namespace, name=name, template=body.templateRef)
+    return RolloutRequestOut(
+        name=name, namespace=namespace,
+        templateRef=body.templateRef,
+        status={"phase": "Pending"},
+    )
+
+
+@app.delete("/rollout/namespaces/{namespace}/deployments/{name}", status_code=204, tags=["rollout"])
+def delete_deployment(namespace: str, name: str, k8s=Depends(get_k8s)):
+    """Delete a RolloutRequest (and its associated Rollout via rollout-operator)."""
+    try:
+        k8s.delete_namespaced_custom_object(
+            group=PLATFORM_GROUP, version=PLATFORM_VERSION,
+            namespace=namespace, plural="rolloutrequests", name=name,
+        )
+    except ApiException as e:
+        if e.status == 404:
+            raise HTTPException(status_code=404, detail="Deployment not found")
+        raise HTTPException(status_code=502, detail=f"Kubernetes error: {e.reason}")
+
+    log.info("rollout_request_deleted", namespace=namespace, name=name)
 
 
 if __name__ == "__main__":

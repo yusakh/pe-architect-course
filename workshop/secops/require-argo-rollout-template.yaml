@@ -1,0 +1,18 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: requireargorollout
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequireArgoRollout
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package require.argo.rollout
+
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Deployment"
+          msg := "Deployments are not allowed in this namespace. Use an Argo Rollout (argoproj.io/v1alpha1) instead."
+        }

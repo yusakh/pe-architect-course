@@ -8,3 +8,17 @@ export interface Team {
 export interface TeamCreate {
   name: string;
 }
+
+export interface RolloutTemplate {
+  name: string;
+  image: string;
+  strategy: string;
+  replicas: number;
+}
+
+export interface RolloutDeployment {
+  name: string;
+  namespace: string;
+  templateRef: string;
+  status: { phase: string; message?: string; rolloutName?: string };
+}

@@ -22,8 +22,14 @@ logger = logging.getLogger('teams-operator')
 
 CONSTRAINT_GROUP   = "constraints.gatekeeper.sh"
 CONSTRAINT_VERSION = "v1beta1"
-CONSTRAINT_PLURAL  = "falcorootprevention"
-CONSTRAINT_NAME    = "enforce-falco-root-prevention"
+
+# FalcoRootPrevention — blocks containers running as root
+FALCO_CONSTRAINT_PLURAL = "falcorootprevention"
+FALCO_CONSTRAINT_NAME   = "enforce-falco-root-prevention"
+
+# RequireArgoRollout — blocks plain Deployments, requires Argo Rollouts
+ROLLOUT_CONSTRAINT_PLURAL = "requireargorollout"
+ROLLOUT_CONSTRAINT_NAME   = "enforce-argo-rollout"
 
 class TeamsOperator:
     def __init__(self):
@@ -147,43 +153,64 @@ class TeamsOperator:
             logger.error(f"❌ Unexpected error deleting namespace: {e}")
             return False
     
-    def _get_constraint_namespaces(self) -> list:
-        """Return current spec.match.namespaces from FalcoRootPrevention constraint."""
+    def _verify_constraint_exists(self, plural: str, name: str):
+        """Warn loudly on startup if a required Gatekeeper constraint is missing."""
+        try:
+            self.k8s_custom.get_cluster_custom_object(
+                group=CONSTRAINT_GROUP, version=CONSTRAINT_VERSION,
+                plural=plural, name=name,
+            )
+            logger.info(f"✅ Constraint '{name}' found")
+        except ApiException as e:
+            if e.status == 404:
+                logger.error(f"❌ Constraint '{name}' not found — apply secops/{plural}*.yaml before running the operator")
+            else:
+                logger.error(f"Failed to check constraint '{name}': {e}")
+
+    def _get_constraint_namespaces(self, plural: str, name: str) -> list:
         try:
             obj = self.k8s_custom.get_cluster_custom_object(
                 group=CONSTRAINT_GROUP, version=CONSTRAINT_VERSION,
-                plural=CONSTRAINT_PLURAL, name=CONSTRAINT_NAME,
+                plural=plural, name=name,
             )
             return obj.get("spec", {}).get("match", {}).get("namespaces", [])
         except ApiException as e:
             if e.status == 404:
-                logger.warning(f"Constraint {CONSTRAINT_NAME} not found — skipping")
+                logger.warning(f"Constraint '{name}' not found — skipping")
                 return []
-            logger.error(f"Failed to read constraint: {e}")
+            logger.error(f"Failed to read constraint '{name}': {e}")
             return []
 
-    def _patch_constraint_namespaces(self, namespaces: list) -> bool:
+    def _patch_constraint_namespaces(self, plural: str, name: str, namespaces: list) -> bool:
         try:
             self.k8s_custom.patch_cluster_custom_object(
                 group=CONSTRAINT_GROUP, version=CONSTRAINT_VERSION,
-                plural=CONSTRAINT_PLURAL, name=CONSTRAINT_NAME,
+                plural=plural, name=name,
                 body={"spec": {"match": {"namespaces": namespaces}}},
             )
-            logger.info(f"FalcoRootPrevention namespaces updated: {namespaces}")
+            logger.info(f"Constraint '{name}' namespaces updated: {namespaces}")
             return True
         except ApiException as e:
-            logger.error(f"Failed to patch constraint: {e}")
+            logger.error(f"Failed to patch constraint '{name}': {e}")
             return False
 
-    def add_namespace_to_constraint(self, namespace_name: str):
-        namespaces = self._get_constraint_namespaces()
+    def _add_ns_to_constraint(self, plural: str, name: str, namespace_name: str):
+        namespaces = self._get_constraint_namespaces(plural, name)
         if namespace_name not in namespaces:
-            self._patch_constraint_namespaces(namespaces + [namespace_name])
+            self._patch_constraint_namespaces(plural, name, namespaces + [namespace_name])
+
+    def _remove_ns_from_constraint(self, plural: str, name: str, namespace_name: str):
+        namespaces = self._get_constraint_namespaces(plural, name)
+        if namespace_name in namespaces:
+            self._patch_constraint_namespaces(plural, name, [n for n in namespaces if n != namespace_name])
+
+    def add_namespace_to_constraint(self, namespace_name: str):
+        self._add_ns_to_constraint(FALCO_CONSTRAINT_PLURAL, FALCO_CONSTRAINT_NAME, namespace_name)
+        self._add_ns_to_constraint(ROLLOUT_CONSTRAINT_PLURAL, ROLLOUT_CONSTRAINT_NAME, namespace_name)
 
     def remove_namespace_from_constraint(self, namespace_name: str):
-        namespaces = self._get_constraint_namespaces()
-        if namespace_name in namespaces:
-            self._patch_constraint_namespaces([n for n in namespaces if n != namespace_name])
+        self._remove_ns_from_constraint(FALCO_CONSTRAINT_PLURAL, FALCO_CONSTRAINT_NAME, namespace_name)
+        self._remove_ns_from_constraint(ROLLOUT_CONSTRAINT_PLURAL, ROLLOUT_CONSTRAINT_NAME, namespace_name)
 
     async def reconcile_teams(self):
         """Main reconciliation loop - sync teams with namespaces"""
@@ -221,7 +248,11 @@ class TeamsOperator:
         logger.info(f"🚀 Teams Operator starting...")
         logger.info(f"📡 Teams API URL: {self.teams_api_url}")
         logger.info(f"⏰ Poll interval: {self.poll_interval} seconds")
-        
+
+        # Verify required Gatekeeper constraints exist before reconciling
+        self._verify_constraint_exists(FALCO_CONSTRAINT_PLURAL, FALCO_CONSTRAINT_NAME)
+        self._verify_constraint_exists(ROLLOUT_CONSTRAINT_PLURAL, ROLLOUT_CONSTRAINT_NAME)
+
         # Initial reconciliation
         await self.reconcile_teams()
         
