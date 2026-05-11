@@ -136,7 +136,43 @@ class RolloutOperator:
         )
         return name
 
+    def _list_managed_rollouts(self) -> list:
+        try:
+            result = self.custom.list_cluster_custom_object(
+                group=ARGO_GROUP, version=ARGO_VERSION, plural="rollouts",
+                label_selector="app.kubernetes.io/managed-by=rollout-operator",
+            )
+            return result.get("items", [])
+        except ApiException as e:
+            logger.error(f"Failed to list managed Rollouts: {e}")
+            return []
+
+    def _delete_rollout(self, namespace: str, name: str):
+        try:
+            self.custom.delete_namespaced_custom_object(
+                group=ARGO_GROUP, version=ARGO_VERSION,
+                namespace=namespace, plural="rollouts", name=name,
+            )
+            logger.info(f"🗑️ Deleted orphaned Rollout '{name}' in namespace '{namespace}'")
+        except ApiException as e:
+            if e.status != 404:
+                logger.error(f"Failed to delete Rollout '{name}': {e}")
+
     def reconcile(self):
+        # Build index of existing RolloutRequests for cascade-delete check
+        existing_requests = {
+            (r["metadata"]["namespace"], r["metadata"]["name"])
+            for r in self._list_requests()
+        }
+
+        # Delete Rollouts whose RolloutRequest was removed
+        for rollout in self._list_managed_rollouts():
+            ns   = rollout["metadata"]["namespace"]
+            name = rollout["metadata"]["name"]
+            if (ns, name) not in existing_requests:
+                self._delete_rollout(ns, name)
+
+        # Create Rollouts for pending requests
         for req in self._list_requests():
             ns   = req["metadata"]["namespace"]
             name = req["metadata"]["name"]

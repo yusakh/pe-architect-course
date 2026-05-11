@@ -250,7 +250,6 @@ class TeamsOperator:
 
         # Verify required Gatekeeper constraints exist before reconciling
         self._verify_constraint_exists(FALCO_CONSTRAINT_PLURAL, FALCO_CONSTRAINT_NAME)
-        self._verify_constraint_exists(ROLLOUT_CONSTRAINT_PLURAL, ROLLOUT_CONSTRAINT_NAME)
 
         # Initial reconciliation
         await self.reconcile_teams()
