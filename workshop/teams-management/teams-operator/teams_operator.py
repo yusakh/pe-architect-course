@@ -205,12 +205,11 @@ class TeamsOperator:
             self._patch_constraint_namespaces(plural, name, [n for n in namespaces if n != namespace_name])
 
     def add_namespace_to_constraint(self, namespace_name: str):
+        # RequireArgoRollout uses namespaceSelector on the teams-operator label — no patching needed
         self._add_ns_to_constraint(FALCO_CONSTRAINT_PLURAL, FALCO_CONSTRAINT_NAME, namespace_name)
-        self._add_ns_to_constraint(ROLLOUT_CONSTRAINT_PLURAL, ROLLOUT_CONSTRAINT_NAME, namespace_name)
 
     def remove_namespace_from_constraint(self, namespace_name: str):
         self._remove_ns_from_constraint(FALCO_CONSTRAINT_PLURAL, FALCO_CONSTRAINT_NAME, namespace_name)
-        self._remove_ns_from_constraint(ROLLOUT_CONSTRAINT_PLURAL, ROLLOUT_CONSTRAINT_NAME, namespace_name)
 
     async def reconcile_teams(self):
         """Main reconciliation loop - sync teams with namespaces"""

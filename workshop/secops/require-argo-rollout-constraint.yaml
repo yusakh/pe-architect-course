@@ -7,4 +7,6 @@ spec:
     kinds:
       - apiGroups: ["apps"]
         kinds: ["Deployment"]
-    namespaces: []  # managed by teams-operator: populated when team namespaces are created
+    namespaceSelector:
+      matchLabels:
+        app.kubernetes.io/managed-by: teams-operator
