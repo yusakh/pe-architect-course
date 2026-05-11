@@ -204,9 +204,14 @@ class RolloutOperator:
                 self._patch_request_status(ns, name, "Running", rollout_name=rollout_name)
                 logger.info(f"✅ Created Rollout '{rollout_name}' in namespace '{ns}'")
             except ApiException as e:
-                msg = f"Failed to create Rollout: {e.reason}"
+                # Extract the full message from the response body (e.g. Gatekeeper violation detail)
+                try:
+                    body = json.loads(e.body) if e.body else {}
+                    msg = body.get("message") or e.reason
+                except Exception:
+                    msg = e.reason
                 self._patch_request_status(ns, name, "Failed", msg)
-                logger.error(f"❌ {msg}")
+                logger.error(f"❌ Failed to create Rollout '{name}': {msg}")
 
     async def run(self):
         logger.info(f"🚀 Rollout Operator starting (poll interval: {self.poll_interval}s)")

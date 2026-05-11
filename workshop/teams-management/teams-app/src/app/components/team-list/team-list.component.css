@@ -252,3 +252,14 @@
   border-top: 1px solid #ecf0f1;
   padding-top: 12px;
 }
+
+.deployment-entry {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.deploy-error {
+  font-size: 12px;
+  color: #c0392b;
+  padding: 4px 0 8px 2px;
+  line-height: 1.4;
+}

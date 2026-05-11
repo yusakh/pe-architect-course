@@ -87,11 +87,16 @@
     <!-- Active deployments in this namespace -->
     <div class="deployments-section" *ngIf="deployments.length > 0">
       <h4>Active deployments</h4>
-      <div class="deployment-row" *ngFor="let d of deployments">
-        <span class="deploy-name">{{ d.name }}</span>
-        <span class="deploy-template">{{ d.templateRef }}</span>
-        <span class="deploy-phase phase-{{ d.status.phase | lowercase }}">{{ d.status.phase }}</span>
-        <button class="btn btn-danger btn-xs" (click)="deleteDeployment(d.name)">Remove</button>
+      <div class="deployment-entry" *ngFor="let d of deployments">
+        <div class="deployment-row">
+          <span class="deploy-name">{{ d.name }}</span>
+          <span class="deploy-template">{{ d.templateRef }}</span>
+          <span class="deploy-phase phase-{{ d.status.phase | lowercase }}">{{ d.status.phase }}</span>
+          <button class="btn btn-danger btn-xs" (click)="deleteDeployment(d.name)">Remove</button>
+        </div>
+        <div class="deploy-error" *ngIf="d.status.phase === 'Failed' && d.status.message">
+          {{ d.status.message }}
+        </div>
       </div>
     </div>
     <p class="no-deployments" *ngIf="deployments.length === 0">No active deployments in this namespace.</p>
