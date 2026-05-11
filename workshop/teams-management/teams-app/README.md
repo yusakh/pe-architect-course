@@ -143,10 +143,10 @@ The application integrates with your Teams API through the following endpoints:
 
 ```bash
 # Build the Docker image
-docker build -t teams-ui:latest .
+docker build -t teams-ui:local .
 
 # Run locally
-docker run -p 8080:80 teams-ui:latest
+docker run -p 8080:8080 teams-ui:local
 ```
 
 ### Multi-stage Build
