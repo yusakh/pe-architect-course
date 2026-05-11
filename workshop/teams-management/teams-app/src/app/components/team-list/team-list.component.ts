@@ -86,14 +86,27 @@ export class TeamListComponent implements OnInit {
     this.teamsService.createDeployment(ns, this.deployName, this.selectedTemplate).subscribe({
       next: (d) => {
         this.isDeploying = false;
-        this.deploySuccess = `Deployment "${d.name}" created (${d.status.phase})`;
-        this.deployments = [...this.deployments, d];
+        this.deploySuccess = `Deployment "${d.name}" created — refreshing status in 5s…`;
         this.deployName = "";
+        // Reload from server after operator has had time to process
+        setTimeout(() => this.refreshDeployments(), 5000);
       },
       error: (err) => {
         this.isDeploying = false;
         this.deployError = err;
       },
+    });
+  }
+
+  refreshDeployments() {
+    if (!this.deployModalTeam) return;
+    const ns = this.teamsService.teamNamespace(this.deployModalTeam.name);
+    this.teamsService.getDeployments(ns).subscribe({
+      next: (d) => {
+        this.deployments = d;
+        this.deploySuccess = "";
+      },
+      error: () => {},
     });
   }
 

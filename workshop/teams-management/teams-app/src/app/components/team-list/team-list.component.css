@@ -152,6 +152,12 @@
   color: #2c3e50;
 }
 
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .modal-close {
   background: none;
   border: none;
@@ -159,6 +165,19 @@
   cursor: pointer;
   color: #7f8c8d;
   line-height: 1;
+}
+
+.btn-refresh {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #3498db;
+  line-height: 1;
+}
+
+.btn-refresh:hover {
+  color: #2980b9;
 }
 
 .modal-body {

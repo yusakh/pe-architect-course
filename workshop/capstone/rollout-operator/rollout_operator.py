@@ -4,6 +4,7 @@ Rollout Operator - Watches RolloutRequest CRDs and creates Argo Rollout resource
 """
 
 import asyncio
+import json
 import logging
 import os
 from kubernetes import client, config

@@ -373,9 +373,28 @@ def list_rollout_templates(k8s=Depends(get_k8s)):
     return out
 
 
+def _argo_rollout_status(k8s, namespace: str, name: str) -> Optional[dict]:
+    """Return {phase, message} from the live Argo Rollout, or None if not found."""
+    try:
+        rollout = k8s.get_namespaced_custom_object(
+            group="argoproj.io", version="v1alpha1",
+            namespace=namespace, plural="rollouts", name=name,
+        )
+        phase = rollout.get("status", {}).get("phase", "")
+        conditions = rollout.get("status", {}).get("conditions", [])
+        msg = next(
+            (c.get("message", "") for c in conditions
+             if c.get("type") in ("Available", "Progressing") and c.get("status") == "False"),
+            ""
+        )
+        return {"phase": phase, "message": msg}
+    except ApiException:
+        return None
+
+
 @app.get("/rollout/namespaces/{namespace}/deployments", response_model=List[RolloutRequestOut], tags=["rollout"])
 def list_deployments(namespace: str, k8s=Depends(get_k8s)):
-    """List RolloutRequests in a team namespace."""
+    """List RolloutRequests in a team namespace, enriched with live Argo Rollout status."""
     try:
         result = k8s.list_namespaced_custom_object(
             group=PLATFORM_GROUP, version=PLATFORM_VERSION,
@@ -386,15 +405,25 @@ def list_deployments(namespace: str, k8s=Depends(get_k8s)):
             return []
         raise HTTPException(status_code=502, detail=f"Kubernetes error: {e.reason}")
 
-    return [
-        RolloutRequestOut(
-            name=item["metadata"]["name"],
+    out = []
+    for item in result.get("items", []):
+        name = item["metadata"]["name"]
+        status = item.get("status", {"phase": "Pending"})
+
+        # If the operator marked it Running, verify against the live Argo Rollout —
+        # a Degraded rollout means Gatekeeper blocked the Pods after the Rollout was created.
+        if status.get("phase") == "Running":
+            live = _argo_rollout_status(k8s, namespace, name)
+            if live and live["phase"] in ("Degraded", "Error"):
+                status = {"phase": live["phase"], "message": live["message"], "rolloutName": name}
+
+        out.append(RolloutRequestOut(
+            name=name,
             namespace=namespace,
             templateRef=item["spec"]["templateRef"],
-            status=item.get("status", {"phase": "Pending"}),
-        )
-        for item in result.get("items", [])
-    ]
+            status=status,
+        ))
+    return out
 
 
 @app.post("/rollout/namespaces/{namespace}/deployments/{name}", response_model=RolloutRequestOut, status_code=201, tags=["rollout"])

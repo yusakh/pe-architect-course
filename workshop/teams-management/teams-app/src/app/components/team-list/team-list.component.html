@@ -50,7 +50,10 @@
 <div class="modal" *ngIf="deployModalTeam">
   <div class="modal-header">
     <h3>Deploy to <strong>{{ teamsService.teamNamespace(deployModalTeam.name) }}</strong></h3>
-    <button class="modal-close" (click)="closeDeployModal()">✕</button>
+    <div class="modal-header-actions">
+      <button class="btn-refresh" (click)="refreshDeployments()" title="Refresh deployment status">↻</button>
+      <button class="modal-close" (click)="closeDeployModal()">✕</button>
+    </div>
   </div>
 
   <div class="modal-body">
