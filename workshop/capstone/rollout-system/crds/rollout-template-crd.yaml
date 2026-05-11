@@ -41,3 +41,12 @@ spec:
               resources:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              securityContext:
+                type: object
+                properties:
+                  runAsUser:
+                    type: integer
+                  runAsGroup:
+                    type: integer
+                  runAsNonRoot:
+                    type: boolean

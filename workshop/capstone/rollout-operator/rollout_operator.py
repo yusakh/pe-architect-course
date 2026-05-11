@@ -88,6 +88,16 @@ class RolloutOperator:
             {"setWeight": 100},
         ])
 
+        # Use template's securityContext if provided, else default to UID 1000.
+        # Templates with runAsUser: 0 will be blocked by the FalcoRootPrevention policy.
+        tpl_sc = spec.get("securityContext", {})
+        run_as_user = tpl_sc.get("runAsUser", 1000)
+        pod_sc = {
+            "runAsUser": run_as_user,
+            "runAsNonRoot": run_as_user != 0,
+            "runAsGroup": tpl_sc.get("runAsGroup", run_as_user),
+        }
+
         rollout_body = {
             "apiVersion": f"{ARGO_GROUP}/{ARGO_VERSION}",
             "kind": "Rollout",
@@ -110,11 +120,7 @@ class RolloutOperator:
                 "template": {
                     "metadata": {"labels": {"app": name}},
                     "spec": {
-                        "securityContext": {
-                            "runAsUser": 1000,
-                            "runAsNonRoot": True,
-                            "runAsGroup": 1000,
-                        },
+                        "securityContext": pod_sc,
                         "containers": [{
                             "name": name,
                             "image": spec["image"],

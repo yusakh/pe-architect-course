@@ -1,10 +1,10 @@
 apiVersion: rollouts.platform.io/v1alpha1
 kind: RolloutTemplate
 metadata:
-  name: argo-demo
+  name: nginx-nonroot
   namespace: rollout-system
 spec:
-  image: argoproj/rollouts-demo:blue
+  image: nginxinc/nginx-unprivileged:alpine
   port: 8080
   replicas: 2
   strategy:
@@ -17,12 +17,12 @@ spec:
       - setWeight: 100
   resources:
     requests:
+      memory: 32Mi
+      cpu: 25m
+    limits:
       memory: 64Mi
       cpu: 50m
-    limits:
-      memory: 128Mi
-      cpu: 100m
   securityContext:
-    runAsUser: 1000
-    runAsGroup: 1000
+    runAsUser: 101
+    runAsGroup: 101
     runAsNonRoot: true
