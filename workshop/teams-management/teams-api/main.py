@@ -149,6 +149,14 @@ def init_db():
     conn.close()
 
 
+def _team_namespace(name: str) -> str:
+    """Derive the Kubernetes namespace for a team name (mirrors operator logic)."""
+    import re
+    ns = re.sub(r'[^a-z0-9]', '-', name.lower())
+    ns = re.sub(r'-+', '-', ns).strip('-')
+    return f"team-{ns}"[:63]
+
+
 # Pydantic models
 class TeamCreate(BaseModel):
     name: str
@@ -217,10 +225,27 @@ async def root():
 async def create_team(team: TeamCreate):
     """Create a new team"""
     log.info("create_team", name=team.name)
+    new_ns = _team_namespace(team.name)
     team_id = str(uuid.uuid4())
     created_at = datetime.now().isoformat()
     conn = get_db()
     try:
+        # Check for namespace collision before inserting
+        with tracer.start_as_current_span("sqlite.select.teams") as span:
+            span.set_attribute("db.system", "sqlite")
+            span.set_attribute("db.operation", "SELECT")
+            span.set_attribute("db.sql.table", "teams")
+            existing = conn.execute("SELECT name FROM teams").fetchall()
+
+        for row in existing:
+            if _team_namespace(row["name"]) == new_ns:
+                log.warning("create_team_namespace_collision",
+                            name=team.name, conflict=row["name"], namespace=new_ns)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Team name '{team.name}' maps to namespace '{new_ns}' which is already used by team '{row['name']}'"
+                )
+
         with tracer.start_as_current_span("sqlite.insert.teams") as span:
             span.set_attribute("db.system", "sqlite")
             span.set_attribute("db.operation", "INSERT")
@@ -231,13 +256,12 @@ async def create_team(team: TeamCreate):
             )
             conn.commit()
     except sqlite3.IntegrityError:
-        # IntegrityError is raised when UNIQUE constraint on name is violated
         log.warning("create_team_duplicate", name=team.name)
         raise HTTPException(status_code=400, detail="Team name already exists")
     finally:
         conn.close()
     teams_created_counter.add(1, {"team_name": team.name})
-    log.info("team_created", team_id=team_id, name=team.name)
+    log.info("team_created", team_id=team_id, name=team.name, namespace=new_ns)
     return Team(id=team_id, name=team.name, created_at=created_at)
 
 
