@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 NAMESPACE="engineering-platform"
-UI_IMAGE="teams-ui:latest"
+UI_IMAGE="teams-ui:local"
 API_IMAGE="teams-api:local"
 
 # Functions

@@ -26,7 +26,7 @@ spec:
         fsGroup: 101
       containers:
       - name: teams-ui
-        image: teams-ui:latest
+        image: teams-ui:local
         imagePullPolicy: Never
         securityContext:
           runAsUser: 101
