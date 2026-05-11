@@ -410,11 +410,11 @@ def list_deployments(namespace: str, k8s=Depends(get_k8s)):
         name = item["metadata"]["name"]
         status = item.get("status", {"phase": "Pending"})
 
-        # If the operator marked it Running, verify against the live Argo Rollout —
-        # a Degraded rollout means Gatekeeper blocked the Pods after the Rollout was created.
+        # Replace the operator's coarse "Running" with the live Argo Rollout phase
+        # so the UI reflects Progressing, Paused, Healthy, Degraded accurately.
         if status.get("phase") == "Running":
             live = _argo_rollout_status(k8s, namespace, name)
-            if live and live["phase"] in ("Degraded", "Error"):
+            if live and live["phase"]:
                 status = {"phase": live["phase"], "message": live["message"], "rolloutName": name}
 
         out.append(RolloutRequestOut(

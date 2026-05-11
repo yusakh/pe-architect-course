@@ -254,10 +254,14 @@
   font-weight: 600;
 }
 
-.phase-pending  { background: #fdebd0; color: #e67e22; }
-.phase-creating { background: #d6eaf8; color: #2980b9; }
-.phase-running  { background: #d5f5e3; color: #1e8449; }
-.phase-failed   { background: #fadbd8; color: #c0392b; }
+.phase-pending     { background: #fdebd0; color: #e67e22; }
+.phase-creating    { background: #d6eaf8; color: #2980b9; }
+.phase-running     { background: #d5f5e3; color: #1e8449; }
+.phase-healthy     { background: #d5f5e3; color: #1e8449; }
+.phase-progressing { background: #d6eaf8; color: #2980b9; }
+.phase-paused      { background: #fdebd0; color: #e67e22; }
+.phase-degraded    { background: #fadbd8; color: #c0392b; }
+.phase-failed      { background: #fadbd8; color: #c0392b; }
 
 .btn-xs {
   padding: 3px 8px;
