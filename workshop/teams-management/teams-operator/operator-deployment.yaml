@@ -18,7 +18,7 @@ rules:
   resources: ["events"]
   verbs: ["create"]
 - apiGroups: ["constraints.gatekeeper.sh"]
-  resources: ["falcorootprevention"]
+  resources: ["falcorootprevention", "requireargorollout"]
   verbs: ["get", "patch", "update"]
 ---
 # ClusterRoleBinding to grant permissions

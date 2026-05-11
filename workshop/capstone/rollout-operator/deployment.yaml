@@ -55,7 +55,8 @@ spec:
         runAsGroup: 1000
       containers:
       - name: rollout-operator
-        image: DOCKERHUB_USERNAME/rollout-operator:latest
+        image: rollout-operator:local
+        imagePullPolicy: Never
         env:
         - name: POLL_INTERVAL
           value: "15"
