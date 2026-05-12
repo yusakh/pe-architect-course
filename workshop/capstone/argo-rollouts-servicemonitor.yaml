@@ -11,7 +11,7 @@ spec:
     - argo-rollouts
   selector:
     matchLabels:
-      app.kubernetes.io/name: argo-rollouts
+      app.kubernetes.io/name: argo-rollouts-metrics
   endpoints:
   - port: metrics
     path: /metrics
