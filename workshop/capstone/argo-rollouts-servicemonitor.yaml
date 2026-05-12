@@ -6,6 +6,9 @@ metadata:
   labels:
     release: grafana-stack
 spec:
+  namespaceSelector:
+    matchNames:
+    - argo-rollouts
   selector:
     matchLabels:
       app.kubernetes.io/name: argo-rollouts
