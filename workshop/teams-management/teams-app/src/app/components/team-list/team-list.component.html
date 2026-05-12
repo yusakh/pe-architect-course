@@ -97,7 +97,7 @@
           <span class="deploy-phase phase-{{ d.status.phase | lowercase }}">{{ d.status.phase }}</span>
           <button class="btn btn-danger btn-xs" (click)="deleteDeployment(d.name)">Remove</button>
         </div>
-        <div class="deploy-error" *ngIf="(d.status.phase === 'Failed' || d.status.phase === 'Degraded') && d.status.message">
+        <div class="deploy-error" *ngIf="d.status.message">
           {{ d.status.message }}
         </div>
       </div>
