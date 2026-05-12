@@ -1,0 +1,345 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-rollouts-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  argo-rollouts.json: |-
+    {
+      "title": "Argo Rollouts",
+      "uid": "argo-rollouts-overview",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "timezone": "browser",
+      "tags": ["argo-rollouts", "kubernetes"],
+      "graphTooltip": 1,
+      "annotations": {"list": []},
+      "links": [],
+      "editable": true,
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "pluginId": "prometheus",
+            "label": "Datasource",
+            "hide": 0,
+            "refresh": 1,
+            "options": [],
+            "includeAll": false,
+            "multi": false
+          },
+          {
+            "name": "namespace",
+            "type": "query",
+            "datasource": {"type": "prometheus", "uid": "${datasource}"},
+            "label": "Namespace",
+            "query": "label_values(rollout_info, namespace)",
+            "refresh": 2,
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": true,
+            "hide": 0
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Total Rollouts",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {"expr": "count(rollout_info{namespace=~\"$namespace\"}) or vector(0)", "refId": "A"}
+          ],
+          "options": {
+            "reduceOptions": {"calcs": ["lastNotNull"]},
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "blue"}
+            }
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Healthy",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=\"Healthy\"} == 1) or vector(0)", "refId": "A"}
+          ],
+          "options": {
+            "reduceOptions": {"calcs": ["lastNotNull"]},
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Degraded",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=\"Degraded\"} == 1) or vector(0)", "refId": "A"}
+          ],
+          "options": {
+            "reduceOptions": {"calcs": ["lastNotNull"]},
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}]}
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Progressing",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=\"Progressing\"} == 1) or vector(0)", "refId": "A"}
+          ],
+          "options": {
+            "reduceOptions": {"calcs": ["lastNotNull"]},
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "Reconciliation Rate",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {
+              "expr": "sum(rate(rollout_reconcile_count{namespace=~\"$namespace\"}[5m])) by (namespace)",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": {"lineWidth": 2, "fillOpacity": 10}
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Reconciliation Duration",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(rollout_reconcile_bucket{namespace=~\"$namespace\"}[5m])) by (le, namespace))",
+              "legendFormat": "p99 {{namespace}}",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(rollout_reconcile_bucket{namespace=~\"$namespace\"}[5m])) by (le, namespace))",
+              "legendFormat": "p50 {{namespace}}",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {"lineWidth": 2, "fillOpacity": 10}
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "timeseries",
+          "title": "Reconciliation Errors",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {
+              "expr": "sum(increase(rollout_reconcile_error{namespace=~\"$namespace\"}[5m])) by (namespace)",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {"mode": "fixed", "fixedColor": "red"},
+              "custom": {"lineWidth": 2, "fillOpacity": 10}
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "Replicas",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {
+              "expr": "sum(rollout_info_replicas_desired{namespace=~\"$namespace\"}) by (namespace)",
+              "legendFormat": "desired {{namespace}}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rollout_info_replicas_available{namespace=~\"$namespace\"}) by (namespace)",
+              "legendFormat": "available {{namespace}}",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(rollout_info_replicas_unavailable{namespace=~\"$namespace\"}) by (namespace)",
+              "legendFormat": "unavailable {{namespace}}",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {"lineWidth": 2, "fillOpacity": 10}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byRegexp", "options": "unavailable.*"},
+                "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
+              },
+              {
+                "matcher": {"id": "byRegexp", "options": "available.*"},
+                "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]
+              }
+            ]
+          }
+        },
+        {
+          "id": 9,
+          "type": "table",
+          "title": "Rollout Status per Team",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {
+              "expr": "rollout_phase{namespace=~\"$namespace\"} == 1",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "rollout_info_replicas_desired{namespace=~\"$namespace\"}",
+              "legendFormat": "",
+              "refId": "B",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "rollout_info_replicas_available{namespace=~\"$namespace\"}",
+              "legendFormat": "",
+              "refId": "C",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "rollout_info_replicas_unavailable{namespace=~\"$namespace\"}",
+              "legendFormat": "",
+              "refId": "D",
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "options": {
+            "sortBy": [{"displayName": "Namespace"}],
+            "footer": {"show": false}
+          },
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "job": true,
+                  "instance": true,
+                  "Value #A": true
+                },
+                "renameByName": {
+                  "name": "Rollout",
+                  "namespace": "Namespace",
+                  "phase": "Phase",
+                  "Value #B": "Desired",
+                  "Value #C": "Available",
+                  "Value #D": "Unavailable"
+                },
+                "indexByName": {
+                  "Namespace": 0,
+                  "Rollout": 1,
+                  "Phase": 2,
+                  "Desired": 3,
+                  "Available": 4,
+                  "Unavailable": 5
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Phase"},
+                "properties": [
+                  {"id": "custom.displayMode", "value": "color-background"},
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {"type": "value", "options": {"Healthy":     {"color": "green",  "index": 0}}},
+                      {"type": "value", "options": {"Degraded":    {"color": "red",    "index": 1}}},
+                      {"type": "value", "options": {"Progressing": {"color": "blue",   "index": 2}}},
+                      {"type": "value", "options": {"Paused":      {"color": "orange", "index": 3}}}
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Unavailable"},
+                "properties": [
+                  {
+                    "id": "thresholds",
+                    "value": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+                  },
+                  {"id": "custom.displayMode", "value": "color-background"}
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
