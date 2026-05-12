@@ -380,13 +380,35 @@ def _argo_rollout_status(k8s, namespace: str, name: str) -> Optional[dict]:
             group="argoproj.io", version="v1alpha1",
             namespace=namespace, plural="rollouts", name=name,
         )
-        phase = rollout.get("status", {}).get("phase", "")
-        conditions = rollout.get("status", {}).get("conditions", [])
-        msg = next(
-            (c.get("message", "") for c in conditions
-             if c.get("type") in ("Available", "Progressing") and c.get("status") == "False"),
-            ""
-        )
+        status = rollout.get("status", {})
+        phase = status.get("phase", "")
+
+        # Prefer the top-level status.message which Argo Rollouts populates
+        # with the most recent error (including Gatekeeper denial text).
+        msg = status.get("message", "")
+
+        if not msg:
+            # Fall back to conditions for generic unavailability messages.
+            conditions = status.get("conditions", [])
+            msg = next(
+                (c.get("message", "") for c in conditions
+                 if c.get("type") in ("Available", "Progressing") and c.get("status") == "False"),
+                ""
+            )
+
+        if not msg and phase in ("Degraded", "Failed"):
+            # Last resort: scan namespace Events for FailedCreate messages
+            # (ReplicaSet admission denials from Gatekeeper land here).
+            try:
+                core = k8s_client.CoreV1Api()
+                events = core.list_namespaced_event(namespace, field_selector=f"reason=FailedCreate")
+                for ev in sorted(events.items, key=lambda e: e.metadata.creation_timestamp or "", reverse=True):
+                    if name in (ev.involved_object.name or ""):
+                        msg = ev.message or ""
+                        break
+            except Exception:
+                pass
+
         return {"phase": phase, "message": msg}
     except ApiException:
         return None

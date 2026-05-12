@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, OnDestroy } from "@angular/core";
 import { TeamsService } from "../../services/teams.service";
 import { Team, RolloutTemplate, RolloutDeployment } from "../../models/team.model";
 
@@ -7,13 +7,14 @@ import { Team, RolloutTemplate, RolloutDeployment } from "../../models/team.mode
   templateUrl: "./team-list.component.html",
   styleUrls: ["./team-list.component.css"],
 })
-export class TeamListComponent implements OnInit {
+export class TeamListComponent implements OnInit, OnDestroy {
   teams: Team[] = [];
   isLoading = true;
   errorMessage = "";
 
   // Deploy modal state
   deployModalTeam: Team | null = null;
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
   templates: RolloutTemplate[] = [];
   deployments: RolloutDeployment[] = [];
   selectedTemplate = "";
@@ -70,10 +71,29 @@ export class TeamListComponent implements OnInit {
       next: (d) => { this.deployments = d; },
       error: () => { this.deployments = []; },
     });
+
+    this.startPolling();
   }
 
   closeDeployModal() {
     this.deployModalTeam = null;
+    this.stopPolling();
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  private startPolling() {
+    this.stopPolling();
+    this.pollInterval = setInterval(() => this.refreshDeployments(), 5000);
+  }
+
+  private stopPolling() {
+    if (this.pollInterval !== null) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
   }
 
   submitDeploy() {
@@ -86,10 +106,8 @@ export class TeamListComponent implements OnInit {
     this.teamsService.createDeployment(ns, this.deployName, this.selectedTemplate).subscribe({
       next: (d) => {
         this.isDeploying = false;
-        this.deploySuccess = `Deployment "${d.name}" created — refreshing status in 5s…`;
+        this.deploySuccess = `Deployment "${d.name}" created — status updates every 5s`;
         this.deployName = "";
-        // Reload from server after operator has had time to process
-        setTimeout(() => this.refreshDeployments(), 5000);
       },
       error: (err) => {
         this.isDeploying = false;
