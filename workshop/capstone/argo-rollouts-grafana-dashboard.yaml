@@ -52,7 +52,7 @@ data:
           "id": 1,
           "type": "stat",
           "title": "Total Rollouts",
-          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
           "datasource": {"type": "prometheus", "uid": "${datasource}"},
           "targets": [
             {"expr": "count(rollout_info{namespace=~\"$namespace\"}) or vector(0)", "refId": "A"}
@@ -72,10 +72,10 @@ data:
           "id": 2,
           "type": "stat",
           "title": "Healthy",
-          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "gridPos": {"h": 4, "w": 5, "x": 4, "y": 0},
           "datasource": {"type": "prometheus", "uid": "${datasource}"},
           "targets": [
-            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=\"Healthy\"} == 1) or vector(0)", "refId": "A"}
+            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=~\"Healthy|Completed\"} == 1) or vector(0)", "refId": "A"}
           ],
           "options": {
             "reduceOptions": {"calcs": ["lastNotNull"]},
@@ -92,11 +92,11 @@ data:
         {
           "id": 3,
           "type": "stat",
-          "title": "Degraded",
-          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "title": "Degraded / Error / Timeout",
+          "gridPos": {"h": 4, "w": 5, "x": 19, "y": 0},
           "datasource": {"type": "prometheus", "uid": "${datasource}"},
           "targets": [
-            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=\"Degraded\"} == 1) or vector(0)", "refId": "A"}
+            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=~\"Degraded|Error|Timeout\"} == 1) or vector(0)", "refId": "A"}
           ],
           "options": {
             "reduceOptions": {"calcs": ["lastNotNull"]},
@@ -114,7 +114,7 @@ data:
           "id": 4,
           "type": "stat",
           "title": "Progressing",
-          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "gridPos": {"h": 4, "w": 5, "x": 9, "y": 0},
           "datasource": {"type": "prometheus", "uid": "${datasource}"},
           "targets": [
             {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=\"Progressing\"} == 1) or vector(0)", "refId": "A"}
@@ -128,6 +128,27 @@ data:
             "defaults": {
               "color": {"mode": "thresholds"},
               "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "stat",
+          "title": "Paused",
+          "gridPos": {"h": 4, "w": 5, "x": 14, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "targets": [
+            {"expr": "count(rollout_phase{namespace=~\"$namespace\", phase=\"Paused\"} == 1) or vector(0)", "refId": "A"}
+          ],
+          "options": {
+            "reduceOptions": {"calcs": ["lastNotNull"]},
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "thresholds": {"mode": "absolute", "steps": [{"color": "orange", "value": null}]}
             }
           }
         },
