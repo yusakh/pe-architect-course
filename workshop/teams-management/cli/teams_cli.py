@@ -155,22 +155,23 @@ class TeamsAPI:
 
 
 def main():
+    script_name=os.path.basename(__file__)
     parser = argparse.ArgumentParser(
         description="Teams CLI - Manage teams and rollout deployments via the Teams API",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog=f"""
 Examples:
-  teams_cli health
-  teams_cli create "Backend Team"
-  teams_cli list
-  teams_cli get <team-id>
-  teams_cli delete <team-id>
-  teams_cli namespace "Backend Team"          # show k8s namespace for a team name
+  ./{script_name} health
+  ./{script_name} create "Backend Team"
+  ./{script_name} list
+  ./{script_name} get <team-id>
+  ./{script_name} delete <team-id>
+  ./{script_name} namespace "Backend Team"          # show k8s namespace for a team name
 
-  teams_cli rollout templates list
-  teams_cli rollout deployments list team-backend-team
-  teams_cli rollout deployments create team-backend-team my-app --template argo-demo
-  teams_cli rollout deployments delete team-backend-team my-app
+  ./{script_name} rollout templates list
+  ./{script_name} rollout deployments list team-backend-team
+  ./{script_name} rollout deployments create team-backend-team my-app --template argo-demo
+  ./{script_name} rollout deployments delete team-backend-team my-app
         """
     )
 

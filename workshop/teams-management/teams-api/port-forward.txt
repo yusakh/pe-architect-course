@@ -42,10 +42,14 @@ On the remote host (run these in background or separate terminals):
 
   Or batch the coder port-forward into one command:
 
-  coder port-forward 0416-yusakh-arch \
-    --tcp 3002:3002 \
-    --tcp 3000:3000 \
-    --tcp 9090:9090 \
-    --tcp 9093:9093 \
-    --tcp 2801:2801 \
-    --tcp 16686:16686 &
+sudo sysctl net.ipv4.ip_unprivileged_port_start=80
+
+coder port-forward 0416-yusakh-arch \
+  --tcp 3002:3002 \
+  --tcp 3030:3000 \
+  --tcp 9090:9090 \
+  --tcp 9093:9093 \
+  --tcp 2801:2801 \
+  --tcp 16686:16686 \
+  --tcp 8080:8080 \
+  --tcp 80:80 &
